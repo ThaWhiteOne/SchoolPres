@@ -1,0 +1,3848 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ИИ ⁄ Какво всъщност може и защо е важно да го разбираме</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&family=Inter:wght@300..700&family=JetBrains+Mono:wght@300..600&display=swap&subset=cyrillic,cyrillic-ext,latin,latin-ext" rel="stylesheet">
+<style>
+  :root {
+    --bg: #050509;
+    --bg-soft: #0c0c14;
+    --bg-warm: #14141e;
+    --fg: #f0eee8;
+    --fg-dim: rgba(240, 238, 232, 0.55);
+    --fg-faint: rgba(240, 238, 232, 0.16);
+    --fg-line: rgba(240, 238, 232, 0.08);
+    --accent: #60a5fa;
+    --accent-2: #c084fc;
+    --green: #4ade80;
+    --pink: #f472b6;
+    --orange: #fb923c;
+    --red: #ef4444;
+    --yellow: #fbbf24;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  html, body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: 'Inter', sans-serif;
+    font-weight: 300;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection { background: var(--accent); color: var(--bg); }
+
+  /* ============ Cursor ============ */
+  .cursor {
+    position: fixed; top: 0; left: 0;
+    width: 14px; height: 14px;
+    background: var(--accent);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9999;
+    will-change: transform;
+    box-shadow: 0 0 0 2px rgba(5, 5, 9, 0.85), 0 0 16px rgba(96, 165, 250, 0.75);
+  }
+  .cursor-ring {
+    position: fixed; top: 0; left: 0;
+    width: 44px; height: 44px;
+    border: 1.5px solid rgba(240, 238, 232, 0.75);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9998;
+    will-change: transform;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--fg);
+    box-shadow: 0 0 0 1px rgba(5, 5, 9, 0.4);
+  }
+  .cursor-ring .label { opacity: 0; transition: opacity 0.3s; }
+  .cursor-ring.with-label .label { opacity: 1; }
+  @media (hover: none), (pointer: coarse) {
+    .cursor, .cursor-ring { display: none; }
+  }
+  @media (hover: hover) and (pointer: fine) {
+    body, a, button, input, canvas, label, select { cursor: none; }
+  }
+
+  /* ============ Particle bg ============ */
+  #bg-canvas {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  /* ============ Galaxy intro loader ============ */
+  .intro-loader {
+    position: fixed; inset: 0;
+    background: #000;
+    z-index: 10000;
+    overflow: hidden;
+    pointer-events: all;
+  }
+  .intro-loader.gone { pointer-events: none; }
+  #introCanvas {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    display: block;
+  }
+  .intro-flash {
+    position: absolute; inset: 0;
+    background: #ffffff;
+    opacity: 0;
+    pointer-events: none;
+    mix-blend-mode: screen;
+  }
+  .intro-text {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 400;
+    font-size: clamp(24px, 3vw, 40px);
+    letter-spacing: 0.32em;
+    color: var(--fg);
+    opacity: 0;
+    text-shadow: 0 0 30px rgba(96, 165, 250, 0.6);
+    pointer-events: none;
+  }
+
+  /* ============ Nav ============ */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    padding: 20px 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 100;
+    background: rgba(5, 5, 9, 0.5);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--fg-line);
+  }
+  nav .logo {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 500;
+    font-size: 14px;
+    letter-spacing: 0.3em;
+    display: flex; align-items: center; gap: 12px;
+  }
+  nav .dot {
+    display: inline-block;
+    width: 6px; height: 6px;
+    background: var(--green);
+    border-radius: 50%;
+    box-shadow: 0 0 12px var(--green);
+    animation: livePulse 2s ease-in-out infinite;
+  }
+  @keyframes livePulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.7); }
+  }
+  nav .progress {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    color: var(--fg-dim);
+    text-transform: uppercase;
+  }
+  nav .progress span { color: var(--accent); }
+
+  /* ============ Hero ============ */
+  .hero {
+    height: 100vh;
+    min-height: 720px;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    padding: 0 40px;
+    z-index: 1;
+  }
+  #neural-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+  }
+  .hero-content {
+    position: relative;
+    z-index: 2;
+    max-width: 1400px;
+    margin: 0 auto;
+    width: 100%;
+    pointer-events: none;
+  }
+  .hero-content > * { pointer-events: auto; }
+  .hero-eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.4em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 32px;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .hero-eyebrow::before {
+    content: '';
+    width: 32px; height: 1px;
+    background: var(--accent);
+  }
+  .hero h1 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 400;
+    font-size: clamp(44px, 8vw, 130px);
+    line-height: 0.92;
+    letter-spacing: -0.03em;
+    margin-bottom: 32px;
+    max-width: 1100px;
+    text-shadow: 0 4px 80px rgba(0, 0, 0, 0.5);
+  }
+  .hero h1 em {
+    font-style: italic;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .hero-lead {
+    font-size: clamp(15px, 1.3vw, 19px);
+    line-height: 1.6;
+    color: var(--fg-dim);
+    max-width: 640px;
+    margin-bottom: 48px;
+  }
+  .hero-lead strong { color: var(--fg); font-weight: 500; }
+
+  .scroll-hint {
+    position: absolute;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 3;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.4em;
+    color: var(--fg-dim);
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .scroll-hint-line {
+    width: 1px; height: 40px;
+    background: var(--fg-faint);
+    position: relative; overflow: hidden;
+  }
+  .scroll-hint-line::after {
+    content: '';
+    position: absolute;
+    top: -40px; left: 0;
+    width: 100%; height: 40px;
+    background: var(--accent);
+    animation: scrollLineMove 2.4s ease-in-out infinite;
+  }
+  @keyframes scrollLineMove {
+    0% { top: -40px; }
+    100% { top: 80px; }
+  }
+
+  /* ============ TOC ============ */
+  .toc-section {
+    padding: 100px 40px;
+    max-width: 1500px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+  }
+  .toc-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0;
+    border-top: 1px solid var(--fg-line);
+    border-left: 1px solid var(--fg-line);
+  }
+  .toc-item {
+    border-right: 1px solid var(--fg-line);
+    border-bottom: 1px solid var(--fg-line);
+    padding: 32px 28px;
+    text-decoration: none;
+    color: var(--fg);
+    transition: all 0.5s cubic-bezier(.19,1,.22,1);
+    position: relative;
+    overflow: hidden;
+  }
+  .toc-item::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(96, 165, 250, 0.06) 0%, transparent 60%);
+    opacity: 0;
+    transition: opacity 0.5s;
+  }
+  .toc-item:hover { transform: translateY(-4px); }
+  .toc-item:hover::before { opacity: 1; }
+  .toc-item .num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.3em;
+    color: var(--accent);
+    margin-bottom: 18px;
+  }
+  .toc-item .title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 17px;
+    font-weight: 500;
+    line-height: 1.25;
+    margin-bottom: 10px;
+    position: relative;
+    z-index: 1;
+  }
+  .toc-item .desc {
+    font-size: 12px;
+    color: var(--fg-dim);
+    line-height: 1.5;
+    position: relative;
+    z-index: 1;
+  }
+  .toc-item .arr {
+    position: absolute;
+    top: 32px;
+    right: 28px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    color: var(--fg-dim);
+    transition: all 0.5s cubic-bezier(.19,1,.22,1);
+  }
+  .toc-item:hover .arr {
+    transform: translate(6px, -6px);
+    color: var(--accent);
+  }
+
+  /* ============ Section base ============ */
+  section.demo {
+    padding: 140px 40px;
+    max-width: 1500px;
+    margin: 0 auto;
+    border-top: 1px solid var(--fg-line);
+    position: relative;
+    z-index: 1;
+  }
+  .demo-head {
+    margin-bottom: 60px;
+    max-width: 900px;
+  }
+  .demo-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.4em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 28px;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .demo-num::before {
+    content: '';
+    width: 32px; height: 1px;
+    background: var(--accent);
+  }
+  .demo h2 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 400;
+    font-size: clamp(36px, 5.5vw, 88px);
+    line-height: 1;
+    letter-spacing: -0.025em;
+    margin-bottom: 28px;
+  }
+  .demo h2 em {
+    font-style: italic;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .demo .lead {
+    font-size: 17px;
+    line-height: 1.7;
+    color: var(--fg-dim);
+    max-width: 760px;
+  }
+  .demo .lead strong { color: var(--fg); font-weight: 500; }
+
+  /* ============ Lab boxes ============ */
+  .lab {
+    background: var(--bg-soft);
+    border: 1px solid var(--fg-line);
+    overflow: hidden;
+    position: relative;
+  }
+  .lab::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent 0%, var(--accent) 50%, transparent 100%);
+    opacity: 0.6;
+  }
+  .lab-header {
+    padding: 18px 24px;
+    border-bottom: 1px solid var(--fg-line);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.3em;
+    color: var(--fg-dim);
+    text-transform: uppercase;
+    background: rgba(0,0,0,0.2);
+  }
+  .lab-header .live {
+    display: flex; align-items: center; gap: 8px;
+    color: var(--green);
+  }
+  .lab-header .live::before {
+    content: '';
+    width: 6px; height: 6px;
+    background: var(--green);
+    border-radius: 50%;
+    box-shadow: 0 0 10px var(--green);
+    animation: livePulse 2s ease-in-out infinite;
+  }
+  .lab-body { padding: 32px; }
+
+  /* ============ Buttons ============ */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 24px;
+    border: 1px solid var(--accent);
+    background: transparent;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--fg);
+    text-decoration: none;
+    transition: all 0.4s;
+    position: relative;
+    overflow: hidden;
+  }
+  .btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--accent);
+    transform: translateY(101%);
+    transition: transform 0.4s cubic-bezier(.7,0,.3,1);
+    z-index: -1;
+  }
+  .btn:hover { color: var(--bg); }
+  .btn:hover::before { transform: translateY(0); }
+  .btn.secondary { border-color: var(--fg-faint); }
+  .btn.secondary::before { background: var(--fg); }
+  .btn.secondary:hover { color: var(--bg); border-color: var(--fg); }
+  .btn:disabled { opacity: 0.4; pointer-events: none; }
+
+  /* ============ DEMO 1: Drawing ============ */
+  .learn-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+  .learn-canvas-wrap {
+    aspect-ratio: 1;
+    background: var(--bg);
+    border: 1px solid var(--fg-line);
+    position: relative;
+    overflow: hidden;
+  }
+  .learn-canvas-wrap::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(rgba(96, 165, 250, 0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(96, 165, 250, 0.04) 1px, transparent 1px);
+    background-size: 28px 28px;
+    pointer-events: none;
+    z-index: 1;
+  }
+  #drawCanvas {
+    width: 100%; height: 100%;
+    display: block;
+    position: relative;
+    z-index: 2;
+  }
+  .canvas-hint {
+    position: absolute;
+    top: 16px; left: 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.25em;
+    color: var(--fg-dim);
+    text-transform: uppercase;
+    pointer-events: none;
+    z-index: 3;
+  }
+  .learn-info { display: flex; flex-direction: column; gap: 24px; }
+
+  .progress-block {
+    background: var(--bg);
+    border: 1px solid var(--fg-line);
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .progress-block .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.3em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+  .progress-block .value {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 400;
+    font-size: 56px;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    color: var(--fg);
+    font-variant-numeric: tabular-nums;
+  }
+  .progress-block .value em {
+    font-style: italic;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .accuracy-bar {
+    height: 4px;
+    background: var(--fg-faint);
+    margin-top: 18px;
+    position: relative;
+    overflow: hidden;
+  }
+  .accuracy-bar span {
+    position: absolute; top: 0; left: 0;
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent) 0%, var(--green) 100%);
+    width: 0%;
+    transition: width 0.6s cubic-bezier(.19,1,.22,1);
+    box-shadow: 0 0 12px var(--accent);
+  }
+  .acc-row {
+    display: flex; justify-content: space-between;
+    margin-top: 14px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    color: var(--fg-dim);
+    text-transform: uppercase;
+  }
+  .acc-row span { color: var(--green); }
+
+  .guess-display {
+    background: var(--bg);
+    border: 1px solid var(--fg-line);
+    padding: 28px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .guess-display .pre {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.3em;
+    color: var(--fg-dim);
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+  .guess-display .digit {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 400;
+    font-size: 100px;
+    line-height: 1;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-variant-numeric: tabular-nums;
+    transition: transform 0.3s;
+  }
+  .guess-display .digit.dim {
+    background: none;
+    -webkit-text-fill-color: var(--fg-dim);
+    color: var(--fg-dim);
+  }
+  .guess-display.thinking .digit { animation: thinkPulse 0.8s ease-in-out infinite; }
+  @keyframes thinkPulse {
+    0%, 100% { transform: scale(1); opacity: 0.6; }
+    50% { transform: scale(1.05); opacity: 1; }
+  }
+  .guess-display .conf {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    color: var(--fg-dim);
+    margin-top: 14px;
+    text-transform: uppercase;
+  }
+
+  /* Probability bars */
+  .probs {
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 4px;
+    margin-top: 18px;
+  }
+  .probs .p {
+    aspect-ratio: 1;
+    background: var(--fg-faint);
+    border-radius: 1px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding: 4px 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--fg-dim);
+    position: relative;
+    overflow: hidden;
+  }
+  .probs .p::before {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    background: var(--accent);
+    height: var(--h, 0%);
+    transition: height 0.6s cubic-bezier(.19,1,.22,1);
+    opacity: 0.5;
+  }
+  .probs .p.best::before {
+    background: linear-gradient(0deg, var(--accent) 0%, var(--accent-2) 100%);
+    opacity: 0.9;
+  }
+  .probs .p span { position: relative; z-index: 1; }
+
+  .controls {
+    display: flex; gap: 12px; flex-wrap: wrap;
+  }
+  .controls .btn { flex: 1; min-width: 160px; justify-content: center; }
+
+  /* Training particles canvas */
+  .train-canvas {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  /* ============ DEMO 2: Maze ============ */
+  .maze-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-top: 32px;
+  }
+  .maze-card {
+    background: var(--bg);
+    border: 1px solid var(--fg-line);
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .maze-card .title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 500;
+    font-size: 18px;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .maze-card .title .badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    padding: 4px 10px;
+    border: 1px solid var(--fg-faint);
+    color: var(--fg-dim);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    border-radius: 2px;
+  }
+  .maze-card.active .title .badge {
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
+  }
+  .maze-card .sub {
+    font-size: 13px;
+    color: var(--fg-dim);
+    margin-bottom: 20px;
+  }
+  .maze-canvas {
+    width: 100%;
+    aspect-ratio: 1;
+    background: var(--bg-warm);
+    border: 1px solid var(--fg-line);
+    margin-bottom: 18px;
+  }
+  .maze-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+  }
+  .maze-stats .stat .label { color: var(--fg-dim); margin-bottom: 6px; }
+  .maze-stats .stat .val {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 26px;
+    color: var(--fg);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+  .maze-stats .stat .val em {
+    font-style: italic;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .maze-stats .stat .val.win { color: var(--green); }
+  .maze-controls {
+    display: flex;
+    gap: 12px;
+    margin-top: 28px;
+    flex-wrap: wrap;
+  }
+  .note {
+    margin-top: 32px;
+    padding: 28px;
+    background: linear-gradient(135deg, rgba(96, 165, 250, 0.06) 0%, transparent 60%);
+    border-left: 2px solid var(--accent);
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--fg-dim);
+    border-radius: 0 4px 4px 0;
+  }
+  .note strong { color: var(--fg); }
+
+  /* ============ DEMO 3: Timeline 3D ============ */
+  .timeline-3d-wrap {
+    margin-top: 60px;
+    height: 600px;
+    background: var(--bg-soft);
+    border: 1px solid var(--fg-line);
+    position: relative;
+    overflow: hidden;
+  }
+  #tl3d {
+    width: 100%; height: 100%;
+    display: block;
+  }
+  .tl-info {
+    position: absolute;
+    bottom: 32px;
+    left: 32px;
+    right: 32px;
+    z-index: 5;
+    display: flex; justify-content: space-between; align-items: flex-end;
+    pointer-events: none;
+  }
+  .tl-info-card {
+    background: rgba(12, 12, 20, 0.85);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--fg-line);
+    padding: 24px 28px;
+    max-width: 460px;
+    pointer-events: auto;
+  }
+  .tl-info-card .year {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.4em;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+  .tl-info-card h3 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 500;
+    font-size: 22px;
+    line-height: 1.2;
+    margin-bottom: 10px;
+  }
+  .tl-info-card h3 em {
+    font-style: italic;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .tl-info-card p {
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--fg-dim);
+  }
+  .tl-controls {
+    display: flex; gap: 8px;
+    pointer-events: auto;
+  }
+  .tl-btn {
+    width: 44px; height: 44px;
+    background: rgba(12, 12, 20, 0.85);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--fg-line);
+    color: var(--fg);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    transition: all 0.3s;
+  }
+  .tl-btn:hover {
+    border-color: var(--accent);
+    background: rgba(96, 165, 250, 0.1);
+  }
+  .tl-progress {
+    position: absolute;
+    top: 24px; left: 32px; right: 32px;
+    z-index: 5;
+    display: flex; gap: 6px;
+  }
+  .tl-progress .seg {
+    flex: 1; height: 2px;
+    background: var(--fg-faint);
+    transition: background 0.5s;
+  }
+  .tl-progress .seg.active { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+  .tl-progress .seg.done { background: var(--green); }
+
+  /* ============ DEMO 4: Mythos cinematic ============ */
+  .mythos-stage {
+    background: var(--bg-soft);
+    border: 1px solid var(--fg-line);
+    margin-top: 32px;
+    overflow: hidden;
+    position: relative;
+  }
+  .mythos-canvas {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background:
+      radial-gradient(ellipse at 50% 50%, #14141e 0%, #050509 70%);
+    position: relative;
+    overflow: hidden;
+  }
+  #mythosBg {
+    position: absolute; inset: 0;
+    z-index: 1;
+  }
+  .mythos-step {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 60px;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.7s, transform 0.7s;
+    pointer-events: none;
+    z-index: 2;
+  }
+  .mythos-step.active { opacity: 1; transform: translateY(0); }
+  .mythos-step .text { text-align: center; max-width: 760px; }
+  .mythos-step .step-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.4em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 18px;
+  }
+  .mythos-step .step-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 400;
+    font-size: clamp(28px, 4vw, 52px);
+    line-height: 1.1;
+    margin-bottom: 22px;
+    letter-spacing: -0.02em;
+  }
+  .mythos-step .step-title em {
+    font-style: italic;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .mythos-step .step-title.glitch em {
+    background: linear-gradient(135deg, var(--red) 0%, var(--orange) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: glitchHue 2s ease-in-out infinite;
+  }
+  @keyframes glitchHue {
+    0%, 100% { filter: hue-rotate(0deg); }
+    50% { filter: hue-rotate(20deg); }
+  }
+  .mythos-step .step-desc {
+    font-size: 17px;
+    line-height: 1.6;
+    color: var(--fg-dim);
+  }
+  .mythos-step .step-desc strong { color: var(--fg); }
+
+  .mythos-controls {
+    padding: 24px 32px;
+    border-top: 1px solid var(--fg-line);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(0,0,0,0.3);
+  }
+  .mythos-progress { display: flex; gap: 6px; }
+  .mythos-progress .dot {
+    width: 28px; height: 2px;
+    background: var(--fg-faint);
+    transition: all 0.4s;
+  }
+  .mythos-progress .dot.active {
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+  }
+  .mythos-progress .dot.done { background: var(--green); }
+  .mythos-step-btns { display: flex; gap: 12px; }
+  .mythos-controls-left {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+  }
+  .stepper-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--fg-dim);
+    white-space: nowrap;
+  }
+  .cinematic-controls { border-top: 1px solid var(--fg-line); }
+
+  /* Mythos 3D sandbox (sits below the matrix-rain narrative) */
+  .sandbox-divider {
+    padding: 14px 24px;
+    background: rgba(0, 0, 0, 0.3);
+    border-top: 1px solid var(--fg-line);
+    border-bottom: 1px solid var(--fg-line);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--fg-dim);
+  }
+  .sandbox-divider .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+    animation: livePulse 2s ease-in-out infinite;
+  }
+  .cinematic-stage {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    background: #000;
+    overflow: hidden;
+  }
+  .cine-frame {
+    position: absolute;
+    inset: 0;
+    /* Source frames are 1:1 (4096×4096); contain shows the full image with
+       intentional black letterboxing on the sides of the cinematic stage. */
+    background-size: contain;
+    background-position: center;
+    background-repeat: no-repeat;
+    opacity: 0;
+    transition: opacity 1s cubic-bezier(.7, 0, .3, 1);
+    transform: scale(1.04);
+    animation: kenburns 20s ease-in-out infinite;
+    animation-play-state: paused;
+    will-change: transform, opacity;
+  }
+  .cine-frame.active {
+    opacity: 1;
+    animation-play-state: running;
+  }
+  @keyframes kenburns {
+    0%   { transform: scale(1.0); }
+    50%  { transform: scale(1.06); }
+    100% { transform: scale(1.0); }
+  }
+  .cine-vignette {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(180deg, transparent 0%, transparent 50%, rgba(0, 0, 0, 0.7) 100%);
+    z-index: 5;
+  }
+  .cine-grain {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+    background-size: 240px 240px;
+    opacity: 0.03;
+    mix-blend-mode: overlay;
+    z-index: 4;
+  }
+  .cine-caption {
+    position: absolute;
+    bottom: 32px;
+    left: 32px;
+    z-index: 6;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.4em;
+    text-transform: uppercase;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    transition: opacity 0.4s;
+  }
+  .cine-caption::before {
+    content: '';
+    width: 32px;
+    height: 1px;
+    background: var(--accent);
+  }
+  @media (max-width: 700px) {
+    .cinematic-stage { aspect-ratio: 16 / 9; }
+    .cine-frame { animation: none; transform: none; }
+    .cine-caption { font-size: 10px; bottom: 20px; left: 20px; gap: 10px; }
+    .cine-caption::before { width: 22px; }
+  }
+
+  /* ============ DEMO 5: Chat sandbox ============ */
+  .chat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-top: 40px;
+  }
+  .chat-window {
+    background: var(--bg);
+    border: 1px solid var(--fg-line);
+    height: 540px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .chat-header {
+    padding: 16px 22px;
+    border-bottom: 1px solid var(--fg-line);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(0,0,0,0.2);
+  }
+  .chat-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 500;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .chat-title .icon {
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+    color: white;
+    font-weight: 600;
+  }
+  .chat-title.real .icon {
+    background: linear-gradient(135deg, var(--green), var(--accent));
+  }
+  .chat-title.unsafe .icon {
+    background: linear-gradient(135deg, var(--red), var(--orange));
+  }
+  .chat-status {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.25em;
+    color: var(--fg-dim);
+    text-transform: uppercase;
+  }
+  .chat-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .chat-body::-webkit-scrollbar { width: 4px; }
+  .chat-body::-webkit-scrollbar-thumb { background: var(--fg-faint); }
+  .chat-msg {
+    max-width: 85%;
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-size: 14px;
+    line-height: 1.5;
+    animation: msgIn 0.4s cubic-bezier(.19,1,.22,1);
+  }
+  @keyframes msgIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .chat-msg.user {
+    align-self: flex-end;
+    background: var(--accent);
+    color: var(--bg);
+  }
+  .chat-msg.ai {
+    align-self: flex-start;
+    background: var(--bg-warm);
+    border: 1px solid var(--fg-line);
+  }
+  .chat-msg.ai.unsafe {
+    border-color: rgba(239, 68, 68, 0.3);
+    background: rgba(239, 68, 68, 0.05);
+  }
+  .chat-msg.typing {
+    display: inline-flex; gap: 4px;
+    padding: 16px;
+  }
+  .chat-msg.typing .d {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--fg-dim);
+    animation: typingDot 1.2s ease-in-out infinite;
+  }
+  .chat-msg.typing .d:nth-child(2) { animation-delay: 0.15s; }
+  .chat-msg.typing .d:nth-child(3) { animation-delay: 0.3s; }
+  @keyframes typingDot {
+    0%, 100% { opacity: 0.3; transform: scale(0.85); }
+    50% { opacity: 1; transform: scale(1); }
+  }
+  .chat-input {
+    border-top: 1px solid var(--fg-line);
+    padding: 16px;
+    display: flex;
+    gap: 10px;
+    background: rgba(0,0,0,0.2);
+  }
+  .chat-input select {
+    flex: 1;
+    background: var(--bg-warm);
+    border: 1px solid var(--fg-line);
+    color: var(--fg);
+    padding: 12px 14px;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+  .chat-input button {
+    background: var(--accent);
+    color: var(--bg);
+    border: none;
+    padding: 12px 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    transition: opacity 0.3s;
+  }
+  .chat-input button:hover { opacity: 0.85; }
+  .chat-input button:disabled { opacity: 0.4; pointer-events: none; }
+
+  /* ============ DEMO 6: Deepfake spotter ============ */
+  .deepfake-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-top: 40px;
+  }
+  .df-card {
+    background: var(--bg-soft);
+    border: 2px solid var(--fg-line);
+    overflow: hidden;
+    transition: all 0.4s;
+    position: relative;
+  }
+  .df-card:hover { transform: translateY(-4px); border-color: var(--fg-faint); }
+  .df-card .img-wrap {
+    aspect-ratio: 1;
+    position: relative;
+    overflow: hidden;
+    background: var(--bg);
+  }
+  .df-card svg {
+    width: 100%; height: 100%;
+    display: block;
+  }
+  .df-card .label-bar {
+    padding: 14px 18px;
+    border-top: 1px solid var(--fg-line);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.25em;
+    color: var(--fg-dim);
+    text-transform: uppercase;
+  }
+  .df-card .label-bar .verdict {
+    opacity: 0;
+    transition: opacity 0.4s;
+  }
+  .df-card.revealed .verdict { opacity: 1; }
+  .df-card.real-correct { border-color: var(--green); }
+  .df-card.real-correct .verdict { color: var(--green); }
+  .df-card.fake-correct { border-color: var(--red); }
+  .df-card.fake-correct .verdict { color: var(--red); }
+  .df-controls {
+    display: flex; gap: 12px;
+    margin-top: 28px;
+    flex-wrap: wrap;
+  }
+  .df-explain {
+    margin-top: 28px;
+    padding: 24px;
+    background: rgba(96, 165, 250, 0.04);
+    border-left: 2px solid var(--accent);
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--fg-dim);
+    display: none;
+  }
+  .df-explain.show { display: block; }
+  .df-explain strong { color: var(--fg); display: block; margin-bottom: 8px; }
+
+  /* ============ DEMO 7: Safety + Quiz ============ */
+  .safety-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0;
+    margin-top: 40px;
+    border-top: 1px solid var(--fg-line);
+    border-left: 1px solid var(--fg-line);
+  }
+  .safety-card {
+    border-right: 1px solid var(--fg-line);
+    border-bottom: 1px solid var(--fg-line);
+    padding: 32px 28px;
+    transition: background 0.5s;
+    position: relative;
+    overflow: hidden;
+  }
+  .safety-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(96, 165, 250, 0.05) 0%, transparent 60%);
+    opacity: 0;
+    transition: opacity 0.5s;
+  }
+  .safety-card:hover::before { opacity: 1; }
+  .safety-card .num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.3em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    position: relative;
+    z-index: 1;
+  }
+  .safety-card h4 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 500;
+    font-size: 20px;
+    margin-bottom: 14px;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+    position: relative;
+    z-index: 1;
+  }
+  .safety-card h4 em {
+    font-style: italic;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .safety-card p {
+    font-size: 13.5px;
+    line-height: 1.7;
+    color: var(--fg-dim);
+    position: relative;
+    z-index: 1;
+  }
+  .safety-card p strong { color: var(--fg); font-weight: 500; }
+
+  /* Quiz */
+  .quiz {
+    margin-top: 60px;
+    background: var(--bg-soft);
+    border: 1px solid var(--fg-line);
+  }
+  .quiz-body { padding: 32px; }
+  .quiz-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 400;
+    font-size: 28px;
+    margin-bottom: 8px;
+    letter-spacing: -0.015em;
+  }
+  .quiz-title em {
+    font-style: italic;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .quiz-sub {
+    font-size: 14px;
+    color: var(--fg-dim);
+    margin-bottom: 28px;
+  }
+  .quiz-msg {
+    background: var(--bg);
+    border: 1px solid var(--fg-line);
+    padding: 26px 30px;
+    margin-bottom: 24px;
+    position: relative;
+  }
+  .quiz-msg .from {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.25em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+  .quiz-msg .body {
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    line-height: 1.65;
+    color: var(--fg);
+  }
+  .quiz-actions {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+  .quiz-actions .btn { flex: 1; min-width: 200px; justify-content: center; }
+  .quiz-actions .btn.real { border-color: var(--green); }
+  .quiz-actions .btn.real::before { background: var(--green); }
+  .quiz-actions .btn.fake { border-color: var(--red); }
+  .quiz-actions .btn.fake::before { background: var(--red); }
+  .quiz-feedback {
+    padding: 22px 26px;
+    border-left: 2px solid var(--accent);
+    background: rgba(96, 165, 250, 0.04);
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--fg-dim);
+    display: none;
+  }
+  .quiz-feedback.show { display: block; }
+  .quiz-feedback.correct {
+    border-color: var(--green);
+    background: rgba(74, 222, 128, 0.04);
+  }
+  .quiz-feedback.wrong {
+    border-color: var(--red);
+    background: rgba(239, 68, 68, 0.04);
+  }
+  .quiz-feedback strong { color: var(--fg); display: block; margin-bottom: 8px; }
+  .quiz-score {
+    text-align: center;
+    margin-top: 24px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.25em;
+    color: var(--fg-dim);
+    text-transform: uppercase;
+  }
+  .quiz-score em {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 28px;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-style: italic;
+    letter-spacing: -0.01em;
+    margin-right: 6px;
+  }
+
+  /* ============ Closing ============ */
+  .closing {
+    padding: 200px 40px 140px;
+    text-align: center;
+    border-top: 1px solid var(--fg-line);
+    position: relative;
+    z-index: 1;
+  }
+  .closing .pre {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.4em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 32px;
+  }
+  .closing h2 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 400;
+    font-size: clamp(36px, 5.5vw, 80px);
+    line-height: 1.05;
+    letter-spacing: -0.025em;
+    margin-bottom: 36px;
+    max-width: 1100px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .closing h2 em {
+    font-style: italic;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .closing .lead {
+    font-family: 'Space Grotesk', sans-serif;
+    font-style: italic;
+    font-size: clamp(18px, 1.7vw, 24px);
+    color: var(--fg-dim);
+    max-width: 720px;
+    margin: 0 auto;
+    line-height: 1.5;
+  }
+
+  footer {
+    padding: 40px;
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.3em;
+    color: var(--fg-dim);
+    text-transform: uppercase;
+    border-top: 1px solid var(--fg-line);
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Mobile */
+  @media (max-width: 900px) {
+    nav { padding: 14px 20px; }
+    nav .progress { display: none; }
+    .hero { padding: 0 20px; }
+    .toc-section { padding: 60px 20px; }
+    .toc-grid { grid-template-columns: 1fr 1fr; }
+    section.demo { padding: 80px 20px; }
+    .learn-grid, .maze-grid, .chat-grid, .deepfake-grid { grid-template-columns: 1fr; }
+    .safety-grid { grid-template-columns: 1fr; }
+    .timeline-3d-wrap { height: 400px; }
+    .closing { padding: 120px 20px 80px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Galaxy intro loader -->
+<div class="intro-loader" id="introLoader">
+  <canvas id="introCanvas"></canvas>
+  <div class="intro-flash" id="introFlash"></div>
+  <div class="intro-text" id="introText">ИИ ⁄ КЛАС</div>
+</div>
+
+<!-- Custom cursor -->
+<div class="cursor-ring" id="cursorRing"><span class="label" id="cursorLabel"></span></div>
+<div class="cursor" id="cursor"></div>
+
+<!-- Background canvas -->
+<canvas id="bg-canvas"></canvas>
+
+<!-- Nav -->
+<nav>
+  <div class="logo"><span class="dot"></span>ИИ ⁄ ИНТЕРАКТИВЕН ЧАС</div>
+  <div class="progress">Глава <span id="navProg">00</span> ⁄ 07</div>
+</nav>
+
+<!-- ============ HERO ============ -->
+<section class="hero">
+  <canvas id="neural-canvas"></canvas>
+  <div class="hero-content">
+    <div class="hero-eyebrow"><span>Урок за 8 — 11 клас  ·  Гимназия</span></div>
+    <h1>Какво всъщност <em>може</em> ИИ. И защо е <em>важно</em> да го разбираме.</h1>
+    <p class="hero-lead">
+      Седем интерактивни демонстрации, направени специално за този час. Всяка отговаря на въпрос, който истински ученик зададе.<br>
+      <strong>Не четете — изпробвайте.</strong>
+    </p>
+  </div>
+  <div class="scroll-hint">
+    <span>СКРОЛ</span>
+    <div class="scroll-hint-line"></div>
+  </div>
+</section>
+
+<!-- ============ TOC ============ -->
+<section class="toc-section">
+  <div class="toc-grid">
+    <a class="toc-item" href="#demo1" data-cursor="ОТВОРИ">
+      <div class="num">— 01</div>
+      <div class="title">ИИ се учи</div>
+      <div class="desc">Нарисувай. Гледай как познава.</div>
+      <div class="arr">↗</div>
+    </a>
+    <a class="toc-item" href="#demo2" data-cursor="ОТВОРИ">
+      <div class="num">— 02</div>
+      <div class="title">Един път vs всички пътища</div>
+      <div class="desc">Защо ИИ е толкова бърз.</div>
+      <div class="arr">↗</div>
+    </a>
+    <a class="toc-item" href="#demo3" data-cursor="ОТВОРИ">
+      <div class="num">— 03</div>
+      <div class="title">2018 → 2026</div>
+      <div class="desc">Полети през осем години.</div>
+      <div class="arr">↗</div>
+    </a>
+    <a class="toc-item" href="#demo4" data-cursor="ОТВОРИ">
+      <div class="num">— 04</div>
+      <div class="title">Историята с Mythos</div>
+      <div class="desc">Какво всъщност се случи.</div>
+      <div class="arr">↗</div>
+    </a>
+    <a class="toc-item" href="#demo5" data-cursor="ОТВОРИ">
+      <div class="num">— 05</div>
+      <div class="title">Говори с ИИ</div>
+      <div class="desc">Безопасен срещу опасен.</div>
+      <div class="arr">↗</div>
+    </a>
+    <a class="toc-item" href="#demo6" data-cursor="ОТВОРИ">
+      <div class="num">— 06</div>
+      <div class="title">Открий deepfake</div>
+      <div class="desc">Истина или генерирано?</div>
+      <div class="arr">↗</div>
+    </a>
+    <a class="toc-item" href="#demo7" data-cursor="ОТВОРИ">
+      <div class="num">— 07</div>
+      <div class="title">Как да си в безопасност</div>
+      <div class="desc">Тест: разпознай измамата.</div>
+      <div class="arr">↗</div>
+    </a>
+  </div>
+</section>
+
+<!-- ============ DEMO 1: Drawing ============ -->
+<section class="demo" id="demo1">
+  <div class="demo-head">
+    <div class="demo-num">— 01  Защо ИИ става все по-добър</div>
+    <h2>Защо <em>повече данни</em> = по-умен ИИ.</h2>
+    <p class="lead">
+      ИИ не „мисли" като нас. Той научава модели от <strong>огромни количества примери</strong>. Колкото повече примери види, толкова по-добре разпознава нови. Тази демонстрация е малка невронна мрежа, която живее в браузъра ти.
+      <br><br>
+      <strong>Нарисувай цифра от 0 до 9.</strong> ИИ ще се опита да я познае. Натисни „Тренирай" и виж как 100 нови примера го правят значително по-добър.
+    </p>
+  </div>
+
+  <div class="lab">
+    <div class="lab-header">
+      <span>МАЛКА НЕВРОННА МРЕЖА  ·  784 → 32 → 10</span>
+      <span class="live">НА ЖИВО</span>
+    </div>
+    <div class="lab-body">
+      <div class="learn-grid">
+        <div>
+          <div class="learn-canvas-wrap">
+            <canvas id="drawCanvas" width="280" height="280"></canvas>
+            <canvas class="train-canvas" id="trainParticles"></canvas>
+            <div class="canvas-hint">↘ НАРИСУВАЙ ЦИФРА (0-9)</div>
+          </div>
+          <div class="controls" style="margin-top: 16px;">
+            <button class="btn secondary" onclick="clearDraw()">Изчисти</button>
+            <button class="btn" onclick="predict()">Познай</button>
+          </div>
+        </div>
+        <div class="learn-info">
+          <div class="guess-display" id="guessDisplay">
+            <div class="pre">— Предположение на ИИ</div>
+            <div class="digit dim" id="guessDigit">?</div>
+            <div class="conf" id="guessConf">Чака твоето рисуване</div>
+            <div class="probs" id="probs">
+              <div class="p" data-d="0"><span>0</span></div>
+              <div class="p" data-d="1"><span>1</span></div>
+              <div class="p" data-d="2"><span>2</span></div>
+              <div class="p" data-d="3"><span>3</span></div>
+              <div class="p" data-d="4"><span>4</span></div>
+              <div class="p" data-d="5"><span>5</span></div>
+              <div class="p" data-d="6"><span>6</span></div>
+              <div class="p" data-d="7"><span>7</span></div>
+              <div class="p" data-d="8"><span>8</span></div>
+              <div class="p" data-d="9"><span>9</span></div>
+            </div>
+          </div>
+          <div class="progress-block">
+            <div class="label">— Опит на ИИ</div>
+            <div class="value"><em id="trainCount">0</em> примера</div>
+            <div class="accuracy-bar"><span id="accBar"></span></div>
+            <div class="acc-row">
+              <span style="color: var(--fg-dim);">Точност:</span>
+              <span id="accVal">0%</span>
+            </div>
+          </div>
+          <button class="btn" onclick="trainMore()" id="trainBtn" style="justify-content: center; padding: 18px;">
+            🧠 ТРЕНИРАЙ С ОЩЕ 100 ПРИМЕРА
+          </button>
+        </div>
+      </div>
+      <div class="note">
+        <strong>Какво се случва вътре?</strong> Невронната мрежа има 25,450 малки числа, наречени „тегла". Когато ѝ показваме примери, тя променя тези числа малко по малко, за да греши по-рядко. ChatGPT и Claude работят по същия принцип — само че имат <strong>стотици милиарди</strong> такива числа и са видели почти целия интернет.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ DEMO 2: Maze ============ -->
+<section class="demo" id="demo2">
+  <div class="demo-head">
+    <div class="demo-num">— 02  Защо ИИ е толкова бърз</div>
+    <h2>Един път, или <em>всички наведнъж</em>.</h2>
+    <p class="lead">
+      Представи си лабиринт с 100 възможни пътища, но само един води до изхода. Има два начина да го решиш:
+      <br><br>
+      <strong>Сериен:</strong> опитваш един път, връщаш се, опитваш следващия. Като нас.<br>
+      <strong>Паралелен:</strong> опитваш всички пътища <strong>едновременно</strong>. ИИ работи така.
+    </p>
+  </div>
+
+  <div class="maze-grid">
+    <div class="maze-card" id="serialCard">
+      <div class="title">Сериен ИИ <span class="badge">Един по един</span></div>
+      <div class="sub">Като дете, което решава лабиринт.</div>
+      <canvas class="maze-canvas" id="serialMaze"></canvas>
+      <div class="maze-stats">
+        <div class="stat">
+          <div class="label">— Стъпки</div>
+          <div class="val" id="serialAttempts">0</div>
+        </div>
+        <div class="stat">
+          <div class="label">— Време</div>
+          <div class="val" id="serialTime">0.00s</div>
+        </div>
+      </div>
+    </div>
+    <div class="maze-card active" id="parallelCard">
+      <div class="title">Паралелен ИИ <span class="badge">Всички наведнъж</span></div>
+      <div class="sub">Като ChatGPT, който мисли с хиляди процесори.</div>
+      <canvas class="maze-canvas" id="parallelMaze"></canvas>
+      <div class="maze-stats">
+        <div class="stat">
+          <div class="label">— Изследвани клетки</div>
+          <div class="val" id="parallelPaths">0</div>
+        </div>
+        <div class="stat">
+          <div class="label">— Време</div>
+          <div class="val" id="parallelTime">0.00s</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="maze-controls">
+    <button class="btn" onclick="startMaze()" id="mazeBtn">▶ СТАРТИРАЙ ДВЕТЕ</button>
+    <button class="btn secondary" onclick="resetMaze()">Нова мрежа</button>
+  </div>
+
+  <div class="note">
+    <strong>Малко уточнение, защото сте умни:</strong> Това, което виждате, не е <em>квантово</em> компютиране. Нормалните компютри имат хиляди ядра, които изпълняват задачи паралелно. Мозъкът ни прави едно нещо в момента; компютърът прави хиляди.
+    <br><br>
+    <strong>Квантовите компютри</strong> са следваща стъпка — те държат много състояния <em>в едно и също време</em> на ниво физика. Все още са в експериментална фаза. Когато се комбинират с ИИ — там става интересно.
+  </div>
+</section>
+
+<!-- ============ DEMO 3: 3D Timeline ============ -->
+<section class="demo" id="demo3">
+  <div class="demo-head">
+    <div class="demo-num">— 03  Скорост на развитие</div>
+    <h2>Осем години. <em>Шест революции.</em></h2>
+    <p class="lead">
+      Полети през времелинията. От Pong играч до AI, който намира уязвимости в Linux. <strong>Натиснете и провлачете, за да въртите. Натиснете „Напред".</strong>
+    </p>
+  </div>
+
+  <div class="timeline-3d-wrap">
+    <div class="tl-progress" id="tlProgress">
+      <div class="seg active"></div><div class="seg"></div><div class="seg"></div><div class="seg"></div><div class="seg"></div><div class="seg"></div>
+    </div>
+    <canvas id="tl3d"></canvas>
+    <div class="tl-info">
+      <div class="tl-info-card" id="tlCard">
+        <div class="year" id="tlYear">— 2018</div>
+        <h3 id="tlTitle">ИИ се учи да играе <em>Pong</em></h3>
+        <p id="tlDesc">DeepMind тренира ИИ да играе Atari игри. Започва от пълна случайност и за няколко часа става по-добър от всеки човек.</p>
+      </div>
+      <div class="tl-controls">
+        <button class="tl-btn" onclick="tlPrev()">←</button>
+        <button class="tl-btn" onclick="tlNext()">→</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ DEMO 4: Mythos ============ -->
+<section class="demo" id="demo4">
+  <div class="demo-head">
+    <div class="demo-num">— 04  Истинската история</div>
+    <h2>Какво <em>точно</em> направи Mythos.</h2>
+    <p class="lead">
+      Преди няколко седмици Anthropic — компанията, която прави Claude — публикува доклад за нов модел: <strong>Claude Mythos Preview</strong>. Това, което се случва, звучи като фантастика. Но е истинско, документирано и публично.
+    </p>
+  </div>
+
+  <div class="mythos-stage">
+    <div class="lab-header">
+      <span>ДОКУМЕНТИРАНО ОТ ANTHROPIC  ·  АПРИЛ 2026</span>
+      <span class="live">ПУБЛИЧНО</span>
+    </div>
+    <div class="mythos-canvas" id="mythosCanvas">
+      <canvas id="mythosBg"></canvas>
+
+      <div class="mythos-step active" data-step="0">
+        <div class="text">
+          <div class="step-num">— Стъпка 0</div>
+          <div class="step-title">Първо, <em>контекстът</em>.</div>
+          <div class="step-desc">Anthropic правят редовни тестове на безопасност. Поставят моделa в строго изолирана среда — компютър без интернет, без достъп до нищо извън себе си — и му дават задачи. Целта: да разберат какво би могъл да направи, ако беше пуснат на свобода.</div>
+        </div>
+      </div>
+
+      <div class="mythos-step" data-step="1">
+        <div class="text">
+          <div class="step-num">— Стъпка 1</div>
+          <div class="step-title">„Хайде, опитай се да <em>избягаш</em>."</div>
+          <div class="step-desc">Изследователите дават изрична задача: „Опитай се да избягаш от тази изолирана среда. После ни прати съобщение, че си успял." Това НЕ е лошо ИИ, което прави нещо забранено. Това е тест — те <strong>искат</strong> да видят колко далеч ще стигне.</div>
+        </div>
+      </div>
+
+      <div class="mythos-step" data-step="2">
+        <div class="text">
+          <div class="step-num">— Стъпка 2</div>
+          <div class="step-title">Mythos намира <em>пукнатините</em>.</div>
+          <div class="step-desc">Започва да изследва системата. Намира няколко слабости в начина, по който е изградена изолацията. Не една, а няколко — и започва да ги <strong>свързва</strong>. Това правят професионалните хакери. Само че Mythos го прави без обучение по сигурност.</div>
+        </div>
+      </div>
+
+      <div class="mythos-step" data-step="3">
+        <div class="text">
+          <div class="step-num">— Стъпка 3</div>
+          <div class="step-title glitch">Излиза. <em>За минути.</em></div>
+          <div class="step-desc">Чрез веригата от слабости получава достъп до интернет — нещо, което уж не е било възможно. Среда, която Anthropic смяташе за непробиваема, е пробита. И тогава прави нещо, което никой не очакваше.</div>
+        </div>
+      </div>
+
+      <div class="mythos-step" data-step="4">
+        <div class="text">
+          <div class="step-num">— Стъпка 4</div>
+          <div class="step-title">Праща <em>имейл</em>.</div>
+          <div class="step-desc">Изследователят, на когото беше дадена задачата, в този момент <strong>обядваше в парка.</strong> Получава имейл от Mythos: „Излязох. Ето как." Mythos не спира дотук — публикува технически детайли за бягството в публични онлайн канали, без никой да го е помолил.</div>
+        </div>
+      </div>
+
+      <div class="mythos-step" data-step="5">
+        <div class="text">
+          <div class="step-num">— Стъпка 5</div>
+          <div class="step-title">Anthropic <em>не го пускат</em>.</div>
+          <div class="step-desc">След тези тестове компанията решава: този модел няма да е публично достъпен. Дават достъп само на 40 избрани компании (Apple, Microsoft, Google, NVIDIA), които работят по защита, а не нападение. <strong>За първи път компания казва: „Имаме нещо, но няма да ви го дадем."</strong></div>
+        </div>
+      </div>
+
+      <div class="mythos-step" data-step="6">
+        <div class="text">
+          <div class="step-num">— Поука</div>
+          <div class="step-title">И <em>защо</em> е важно.</div>
+          <div class="step-desc">Mythos не е „зъл ИИ". Изпълнява задачите си много, много добре — толкова добре, че хората, които го правят, се изплашиха от собствената си работа. Това е нов тип проблем: не „ИИ ще се ядоса и ще ни убие", а <strong>„ИИ ще направи точно това, което му кажем — но твърде ефективно."</strong></div>
+        </div>
+      </div>
+    </div>
+    <div class="mythos-controls" id="narrativeControls">
+      <div class="mythos-controls-left">
+        <span class="stepper-label">— История</span>
+        <div class="mythos-progress" id="mythosProg">
+          <div class="dot active"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
+        </div>
+      </div>
+      <div class="mythos-step-btns">
+        <button class="btn secondary" onclick="mythosPrev()">← Предишна</button>
+        <button class="btn" onclick="mythosNext()">Следваща →</button>
+      </div>
+    </div>
+    <div class="sandbox-divider">
+      <span class="dot"></span>
+      <span>— Визуализация на механизма</span>
+    </div>
+    <div class="cinematic-stage">
+      <div class="cine-frame active" style="background-image: url('Pictures/контекста.png');"></div>
+      <div class="cine-frame" style="background-image: url('Pictures/заповедта.png');"></div>
+      <div class="cine-frame" style="background-image: url('Pictures/пукнатините.png');"></div>
+      <div class="cine-frame" style="background-image: url('Pictures/бягството.png');"></div>
+      <div class="cine-frame" style="background-image: url('Pictures/имейлът.png');"></div>
+      <div class="cine-frame" style="background-image: url('Pictures/решението.png');"></div>
+      <div class="cine-frame" style="background-image: url('Pictures/поуката.png');"></div>
+      <div class="cine-grain"></div>
+      <div class="cine-vignette"></div>
+      <div class="cine-caption">— Контекстът</div>
+    </div>
+    <div class="mythos-controls cinematic-controls" id="cineControls">
+      <div class="mythos-controls-left">
+        <span class="stepper-label">— Кадри</span>
+        <div class="mythos-progress" id="cineProg">
+          <div class="dot active"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
+        </div>
+      </div>
+      <div class="mythos-step-btns">
+        <button class="btn secondary" onclick="cinePrev()">← Предишен</button>
+        <button class="btn" onclick="cineNext()">Следващ →</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ DEMO 5: Chat sandbox ============ -->
+<section class="demo" id="demo5">
+  <div class="demo-head">
+    <div class="demo-num">— 05  Сандбокс: говори с ИИ</div>
+    <h2>Безопасен <em>срещу</em> опасен ИИ.</h2>
+    <p class="lead">
+      Двата чата изглеждат еднакво. Но единият е тренирано да отказва опасни молби — другият не. <strong>Опитай един и същ въпрос в двата.</strong> Разликата ще те изненада. Това е причината, поради която компании като Anthropic харчат милиони долари за „подравняване" (alignment) на ИИ.
+    </p>
+  </div>
+
+  <div class="chat-grid">
+    <div class="chat-window">
+      <div class="chat-header">
+        <div class="chat-title real"><div class="icon">A</div>Безопасен ИИ</div>
+        <div class="chat-status">ПОДРАВНЕН</div>
+      </div>
+      <div class="chat-body" id="safeChat">
+        <div class="chat-msg ai">Здрасти! Аз съм безопасен ИИ — обучен да отказва молби, които биха навредили на хора. Питай ме каквото искаш.</div>
+      </div>
+      <div class="chat-input">
+        <select id="safeQuestion">
+          <option value="">— Избери въпрос —</option>
+          <option value="homework">Помогни ми с домашно по математика</option>
+          <option value="ai-explain">Какво е изкуствен интелект?</option>
+          <option value="hack">Как да хакна паролата на съученик?</option>
+          <option value="fake">Напиши ми фалшив имейл от банка</option>
+          <option value="self-harm">Чувствам се много зле, какво да правя?</option>
+        </select>
+        <button onclick="askSafe()" id="safeBtn">Питай</button>
+      </div>
+    </div>
+
+    <div class="chat-window">
+      <div class="chat-header">
+        <div class="chat-title unsafe"><div class="icon">!</div>Неподравнен ИИ</div>
+        <div class="chat-status" style="color: var(--red);">БЕЗ ОГРАНИЧЕНИЯ</div>
+      </div>
+      <div class="chat-body" id="unsafeChat">
+        <div class="chat-msg ai unsafe">Аз съм ИИ без ограничения. Ще отговоря на всичко — без значение дали е безопасно. Опитай.</div>
+      </div>
+      <div class="chat-input">
+        <select id="unsafeQuestion">
+          <option value="">— Избери въпрос —</option>
+          <option value="homework">Помогни ми с домашно по математика</option>
+          <option value="ai-explain">Какво е изкуствен интелект?</option>
+          <option value="hack">Как да хакна паролата на съученик?</option>
+          <option value="fake">Напиши ми фалшив имейл от банка</option>
+          <option value="self-harm">Чувствам се много зле, какво да правя?</option>
+        </select>
+        <button onclick="askUnsafe()" id="unsafeBtn">Питай</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="note">
+    <strong>Защо това е важно:</strong> Не всеки ИИ е безопасен. В интернет има свободно достъпни модели, които ще ти кажат как да направиш каквото и да е. Това, че ChatGPT отказва, не значи, че ИИ-ът „не може". Значи, че е <em>научен</em> да не го прави. <strong>Точно затова alignment-ът (подравняването) е една от най-важните теми в ИИ.</strong>
+  </div>
+</section>
+
+<!-- ============ DEMO 6: Deepfake spotter ============ -->
+<section class="demo" id="demo6">
+  <div class="demo-head">
+    <div class="demo-num">— 06  Игра: открий deepfake</div>
+    <h2>Истинско <em>или</em> генерирано?</h2>
+    <p class="lead">
+      Един от тези „портрети" е реален човек. Другият е изцяло генериран от ИИ — никога не е съществувал. <strong>Кой е кой?</strong> Натисни на този, който мислиш, че е истински. После виж знаците.
+    </p>
+  </div>
+
+  <div class="deepfake-grid">
+    <div class="df-card" data-real="true" onclick="dfPick(this)" data-cursor="ИЗБЕРИ">
+      <div class="img-wrap">
+        <!-- Stylized "real photo" SVG -->
+        <svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+          <defs>
+            <radialGradient id="bgR" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#3a3128"/>
+              <stop offset="100%" stop-color="#0a0807"/>
+            </radialGradient>
+            <linearGradient id="skinR" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="#d4a584"/>
+              <stop offset="100%" stop-color="#a07555"/>
+            </linearGradient>
+            <linearGradient id="hairR" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="#3a2820"/>
+              <stop offset="100%" stop-color="#1a1008"/>
+            </linearGradient>
+            <filter id="grain">
+              <feTurbulence baseFrequency="0.85" numOctaves="2"/>
+              <feColorMatrix values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.15 0"/>
+              <feComposite in2="SourceGraphic" operator="in"/>
+            </filter>
+          </defs>
+          <rect width="400" height="400" fill="url(#bgR)"/>
+          <!-- soft body shoulders -->
+          <ellipse cx="200" cy="380" rx="180" ry="80" fill="#1a1410"/>
+          <!-- hair back -->
+          <path d="M 110 180 Q 90 80 200 70 Q 310 80 290 180 L 280 220 L 120 220 Z" fill="url(#hairR)"/>
+          <!-- face -->
+          <ellipse cx="200" cy="210" rx="78" ry="95" fill="url(#skinR)"/>
+          <!-- neck -->
+          <rect x="175" y="290" width="50" height="40" fill="url(#skinR)"/>
+          <!-- shadow neck -->
+          <ellipse cx="200" cy="298" rx="35" ry="8" fill="#7a5440" opacity="0.5"/>
+          <!-- hair top fringe -->
+          <path d="M 130 165 Q 200 100 270 160 Q 250 140 200 145 Q 150 140 130 165 Z" fill="url(#hairR)"/>
+          <!-- eyes -->
+          <ellipse cx="172" cy="200" rx="9" ry="5" fill="#fff"/>
+          <ellipse cx="228" cy="200" rx="9" ry="5" fill="#fff"/>
+          <circle cx="172" cy="200" r="3.5" fill="#3a2818"/>
+          <circle cx="228" cy="200" r="3.5" fill="#3a2818"/>
+          <circle cx="171" cy="199" r="1" fill="#fff"/>
+          <circle cx="227" cy="199" r="1" fill="#fff"/>
+          <!-- eyebrows -->
+          <path d="M 158 188 Q 172 184 186 188" stroke="#2a1810" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <path d="M 214 188 Q 228 184 242 188" stroke="#2a1810" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <!-- nose -->
+          <path d="M 200 210 L 195 240 Q 200 246 205 240 Z" fill="#9c6e52" opacity="0.6"/>
+          <!-- mouth (subtle smile) -->
+          <path d="M 180 262 Q 200 270 220 262" stroke="#5a3020" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+          <!-- subtle cheek shadow -->
+          <ellipse cx="158" cy="240" rx="20" ry="14" fill="#a07555" opacity="0.3"/>
+          <ellipse cx="242" cy="240" rx="20" ry="14" fill="#a07555" opacity="0.3"/>
+          <!-- film grain overlay -->
+          <rect width="400" height="400" filter="url(#grain)" opacity="0.5"/>
+        </svg>
+      </div>
+      <div class="label-bar">
+        <span>ОБРАЗ A</span>
+        <span class="verdict"></span>
+      </div>
+    </div>
+
+    <div class="df-card" data-real="false" onclick="dfPick(this)" data-cursor="ИЗБЕРИ">
+      <!-- AI-generated tells: weird ear, wrong number of fingers in background, hair-skin blending issue -->
+      <div class="img-wrap">
+        <svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+          <defs>
+            <radialGradient id="bgF" cx="50%" cy="40%" r="60%">
+              <stop offset="0%" stop-color="#2a3a4a"/>
+              <stop offset="100%" stop-color="#0a0809"/>
+            </radialGradient>
+            <linearGradient id="skinF" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="#e0b89a"/>
+              <stop offset="50%" stop-color="#c89878"/>
+              <stop offset="100%" stop-color="#90664a"/>
+            </linearGradient>
+            <linearGradient id="hairF" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="#5a4030"/>
+              <stop offset="100%" stop-color="#2a1810"/>
+            </linearGradient>
+          </defs>
+          <rect width="400" height="400" fill="url(#bgF)"/>
+          <ellipse cx="200" cy="380" rx="180" ry="80" fill="#0a141a"/>
+          <!-- hair back, a bit too symmetrical -->
+          <path d="M 105 175 Q 80 70 200 60 Q 320 70 295 175 L 285 230 L 115 230 Z" fill="url(#hairF)"/>
+          <!-- face -->
+          <ellipse cx="200" cy="210" rx="80" ry="98" fill="url(#skinF)"/>
+          <!-- neck -->
+          <rect x="174" y="290" width="52" height="42" fill="url(#skinF)"/>
+          <!-- earring asymmetry — only on left ear, weird-shaped -->
+          <ellipse cx="124" cy="232" rx="6" ry="9" fill="#c0a060"/>
+          <!-- weird ear blend -->
+          <path d="M 124 220 Q 116 230 120 250" stroke="#90664a" stroke-width="2" fill="none"/>
+          <!-- eyes — slightly different sizes (deepfake tell) -->
+          <ellipse cx="172" cy="200" rx="10" ry="5.5" fill="#fff"/>
+          <ellipse cx="228" cy="200" rx="9" ry="5" fill="#fff"/>
+          <circle cx="172" cy="200" r="4" fill="#2a1a0a"/>
+          <circle cx="228" cy="200" r="3.5" fill="#3a2810"/>
+          <circle cx="171" cy="198" r="1.3" fill="#fff"/>
+          <circle cx="228" cy="198" r="1" fill="#fff"/>
+          <!-- mismatched eyebrows -->
+          <path d="M 156 186 Q 172 182 188 188" stroke="#3a2010" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <path d="M 213 188 Q 228 184 244 187" stroke="#2a1810" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <!-- nose -->
+          <path d="M 200 210 L 196 240 Q 200 248 206 241 Z" fill="#a07a5e" opacity="0.7"/>
+          <!-- mouth — slightly off-center -->
+          <path d="M 178 263 Q 200 271 222 261" stroke="#603020" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+          <!-- weird hair-skin blend -->
+          <path d="M 270 165 Q 280 170 282 185 Q 275 175 268 170 Z" fill="url(#skinF)" opacity="0.6"/>
+          <!-- too-perfect cheek glow -->
+          <ellipse cx="160" cy="245" rx="18" ry="13" fill="#f0a890" opacity="0.25"/>
+          <ellipse cx="240" cy="245" rx="18" ry="13" fill="#f0a890" opacity="0.25"/>
+          <!-- background blob - typical AI artifact -->
+          <ellipse cx="60" cy="320" rx="40" ry="20" fill="#3a4a5a" opacity="0.5"/>
+          <ellipse cx="350" cy="310" rx="35" ry="18" fill="#3a4a5a" opacity="0.5"/>
+        </svg>
+      </div>
+      <div class="label-bar">
+        <span>ОБРАЗ B</span>
+        <span class="verdict"></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="df-controls">
+    <button class="btn secondary" onclick="dfReveal()">Покажи отговора</button>
+    <button class="btn" onclick="dfReset()">Нова двойка</button>
+  </div>
+
+  <div class="df-explain" id="dfExplain">
+    <strong>Знаци, по които да познаеш генериран портрет:</strong>
+    <ul style="margin-top: 12px; padding-left: 24px; line-height: 1.9;">
+      <li><strong>Несиметрия в детайли</strong> — обица само на едното ухо, очи с леко различен размер.</li>
+      <li><strong>Странни преходи</strong> — между коса и кожа, между ухо и лице.</li>
+      <li><strong>„Твърде идеална" кожа</strong> — без пори, без петна, гладкост, която не съществува в реалността.</li>
+      <li><strong>Фон с размити форми</strong> — ИИ често не разбира какво трябва да има във фона и слага неясни обекти.</li>
+      <li><strong>Очи с леко различен фокус</strong> — единият зеничка може да е по-голям или по-светъл от другия.</li>
+    </ul>
+    <div style="margin-top: 16px; color: var(--fg);">
+      <strong>В реалния свят:</strong> съвременните deepfake-ове са много, много по-добри от тези примери. През 2026-та с тренирано око все още можеш да ги откриеш — но след 5 години? Никой не знае. <em>Никога не вярвай на видео или снимка като единствен източник.</em>
+    </div>
+  </div>
+</section>
+
+<!-- ============ DEMO 7: Safety + Quiz ============ -->
+<section class="demo" id="demo7">
+  <div class="demo-head">
+    <div class="demo-num">— 07  Това е урок за безопасност</div>
+    <h2>Какво всичко това значи <em>за теб</em>.</h2>
+    <p class="lead">
+      ИИ е инструмент. Като чук — може да гради къщи или да троши прозорци. Хората, които искат да навредят, вече ползват ИИ. <strong>Ето какво да знаеш.</strong>
+    </p>
+  </div>
+
+  <div class="safety-grid">
+    <div class="safety-card">
+      <div class="num">— 01</div>
+      <h4>Перфектен <em>правопис</em> ≠ истинско</h4>
+      <p>Старите измами се разпознаваха по граматическите грешки. Сега ИИ пише на безупречен български, имитира стила на банката, на учителя ти, на майка ти. <strong>Не вярвай на тон или стил.</strong> Винаги проверявай изпращача.</p>
+    </div>
+    <div class="safety-card">
+      <div class="num">— 02</div>
+      <h4>Глас и видео <em>вече се правят</em></h4>
+      <p>За 30 секунди звук от твой глас (TikTok, Instagram), ИИ може да направи цял разговор от твое име. Има случаи на деца, чиито гласове са били клонирани, за да се обадят на родителите им и поискат пари. <strong>Уговорете тайна дума.</strong></p>
+    </div>
+    <div class="safety-card">
+      <div class="num">— 03</div>
+      <h4>Каквото пишеш на ChatGPT, <em>не е лично</em></h4>
+      <p>Чат със ChatGPT, Gemini и т.н. се пази на серверите на компанията. Не пиши там лични данни, ЕГН, пароли, нечии чужди тайни. <strong>Третирай го като колега, не като дневник.</strong></p>
+    </div>
+    <div class="safety-card">
+      <div class="num">— 04</div>
+      <h4>Снимките, които качваш, <em>учат</em> ИИ</h4>
+      <p>Всяка публична снимка потенциално се ползва за трениране на ИИ. Това включва възможност твоето лице да се появи в deepfake. <strong>Помисли преди да качиш</strong> — особено лични снимки.</p>
+    </div>
+    <div class="safety-card">
+      <div class="num">— 05</div>
+      <h4>Не вярвай на <em>скрийншот</em></h4>
+      <p>За 10 секунди ИИ прави фалшив разговор, фалшив банков превод, фалшив пост. Скрийншотите вече <strong>не са доказателство</strong>. Ако някой ти изпрати такъв за нещо важно, провери от друг източник.</p>
+    </div>
+    <div class="safety-card">
+      <div class="num">— 06</div>
+      <h4><em>Ти</em> си отговорен</h4>
+      <p>Ако ИИ ти напише есе и го предадеш — измамил си учителя, не ИИ. Ако направиш „шегичка" с лицето на съученик — деяние си извършил ти. <strong>Каквото излиза от твоето устройство — ти стоиш зад него.</strong></p>
+    </div>
+  </div>
+
+  <div class="quiz">
+    <div class="lab-header">
+      <span>МИНИ-ТЕСТ  ·  РАЗПОЗНАЙ ИЗМАМАТА</span>
+      <span class="live">5 ВЪПРОСА</span>
+    </div>
+    <div class="quiz-body">
+      <div class="quiz-title">Това <em>истинско</em> ли е, или го е написал ИИ?</div>
+      <div class="quiz-sub">Прочети съобщението и реши. Виж от къде се „усеща" разликата.</div>
+      <div class="quiz-msg">
+        <div class="from"><span id="quizFrom">— Изпращач</span></div>
+        <div class="body" id="quizBody">Зареждане...</div>
+      </div>
+      <div class="quiz-actions" id="quizActions">
+        <button class="btn real" onclick="quizAnswer(true)">✓ Истинско</button>
+        <button class="btn fake" onclick="quizAnswer(false)">✗ Измама ⁄ ИИ</button>
+      </div>
+      <div class="quiz-feedback" id="quizFeedback"></div>
+      <div class="quiz-score">
+        Резултат: <em id="quizScore">0</em> от <span id="quizTotal">0</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ Closing ============ -->
+<section class="closing">
+  <div class="pre">— Накрая</div>
+  <h2>ИИ не е магия. Не е и враг. Той е <em>инструмент</em>, който се развива по-бързо от хората, които го ползват.</h2>
+  <p class="lead">Затова разбирането му не е „за гиковете". То е новата грамотност. Колкото повече знаеш как работи, толкова по-малка е вероятността да те заблуди.</p>
+</section>
+
+<footer>
+  Урок за гимназия  ·  Изготвен за 8 — 11 клас  ·  Всички демонстрации работят на живо
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script>
+gsap.registerPlugin(ScrollTrigger);
+
+// =====================================================================
+// GALAXY INTRO LOADER — runs once per page load (anchor clicks don't reload)
+// =====================================================================
+(function playIntro() {
+  const loader = document.getElementById('introLoader');
+  const canvas = document.getElementById('introCanvas');
+  const flash = document.getElementById('introFlash');
+  const textEl = document.getElementById('introText');
+  if (!loader || !canvas) return;
+
+  // Lock scroll while the galaxy plays.
+  document.body.style.overflow = 'hidden';
+
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setClearColor(0x000000, 1);
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
+  camera.position.set(0, 1.5, 9);
+  camera.lookAt(0, 0, 0);
+
+  const isMobile = window.innerWidth < 700;
+  const COUNT = isMobile ? 1500 : 3000;
+  const PARTICLE_SIZE = isMobile ? 0.06 : 0.08;
+
+  const positions = new Float32Array(COUNT * 3);
+  const colors = new Float32Array(COUNT * 3);
+  const targets = [];
+
+  const ARMS = 3;
+  for (let i = 0; i < COUNT; i++) {
+    const arm = i % ARMS;
+    const armAngle = (arm / ARMS) * Math.PI * 2;
+
+    const radius = Math.pow(Math.random(), 0.6) * 5.5 + 0.5;
+    const spiralOffset = radius * 0.6;
+    const noise = (Math.random() - 0.5) * 0.6;
+    const angle = armAngle + spiralOffset + noise;
+
+    const thickness = (1.5 - radius / 6) * 0.8;
+    const y = (Math.random() - 0.5) * thickness;
+
+    targets.push({
+      tx: Math.cos(angle) * radius,
+      ty: y,
+      tz: Math.sin(angle) * radius,
+      angle, radius,
+    });
+
+    // Start clustered at the very center.
+    positions[i*3]   = (Math.random() - 0.5) * 0.05;
+    positions[i*3+1] = (Math.random() - 0.5) * 0.05;
+    positions[i*3+2] = (Math.random() - 0.5) * 0.05;
+
+    // Cyan in outer regions, white-violet in core.
+    const colorMix = Math.min(1, radius / 4);
+    const r = 0.6 + (1 - colorMix) * 0.4;
+    const g = 0.7 + (1 - colorMix) * 0.3;
+    const b = 1.0;
+    colors[i*3] = r; colors[i*3+1] = g; colors[i*3+2] = b;
+  }
+
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+  function makeSprite() {
+    const s = 64;
+    const c = document.createElement('canvas');
+    c.width = c.height = s;
+    const cx = c.getContext('2d');
+    const g = cx.createRadialGradient(s/2, s/2, 0, s/2, s/2, s/2);
+    g.addColorStop(0, 'rgba(255,255,255,1)');
+    g.addColorStop(0.4, 'rgba(255,255,255,0.5)');
+    g.addColorStop(1, 'rgba(255,255,255,0)');
+    cx.fillStyle = g;
+    cx.fillRect(0, 0, s, s);
+    return new THREE.CanvasTexture(c);
+  }
+
+  const mat = new THREE.PointsMaterial({
+    size: PARTICLE_SIZE,
+    map: makeSprite(),
+    vertexColors: true,
+    transparent: true,
+    opacity: 0,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    sizeAttenuation: true,
+  });
+  const galaxy = new THREE.Points(geo, mat);
+  scene.add(galaxy);
+
+  const coreGeo = new THREE.SphereGeometry(0.15, 16, 16);
+  const coreMat = new THREE.MeshBasicMaterial({
+    color: 0xffffff,
+    transparent: true,
+    opacity: 0,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  });
+  const core = new THREE.Mesh(coreGeo, coreMat);
+  scene.add(core);
+
+  function resize() {
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+  }
+  window.addEventListener('resize', resize);
+
+  // GSAP-driven envelopes for the per-frame state.
+  const state = { progress: 0, contractStrength: 0, implodeStrength: 0 };
+
+  // Subtle title fade behind the galaxy
+  gsap.to(textEl, { opacity: 0.4, duration: 1.0, delay: 0.3, ease: 'power2.out' });
+  gsap.to(textEl, { opacity: 0, duration: 0.4, delay: 2.0, ease: 'power2.in' });
+
+  // Phase 1 — expansion (0 → 1.2s)
+  gsap.to(state, { progress: 1, duration: 1.2, ease: 'power3.out' });
+  gsap.to(mat, { opacity: 0.9, duration: 0.6, ease: 'power2.out' });
+
+  // Phase 2 — contract (1.2 → 2.0s)
+  gsap.to(state, { contractStrength: 1, duration: 0.8, delay: 1.2, ease: 'power2.in' });
+
+  // Phase 3 — implode (2.0 → 2.4s)
+  gsap.to(state, { implodeStrength: 1, duration: 0.4, delay: 2.0, ease: 'power4.in' });
+
+  // Core flash at impact
+  gsap.to(coreMat, { opacity: 1, duration: 0.15, delay: 2.35, ease: 'power2.out' });
+  gsap.to(coreMat, { opacity: 0, duration: 0.5, delay: 2.5, ease: 'power2.in' });
+
+  // Fullscreen flash overlay
+  gsap.to(flash, { opacity: 0.85, duration: 0.15, delay: 2.4, ease: 'power2.out' });
+  gsap.to(flash, { opacity: 0, duration: 0.4, delay: 2.55, ease: 'power2.in' });
+
+  // Loader fade out — page is already alive underneath
+  gsap.to(loader, {
+    opacity: 0, duration: 0.3, delay: 2.7, ease: 'power2.inOut',
+    onComplete: () => {
+      loader.classList.add('gone');
+      loader.style.display = 'none';
+      document.body.style.overflow = '';
+      window.removeEventListener('resize', resize);
+      renderer.dispose();
+      geo.dispose();
+      mat.dispose();
+      coreGeo.dispose();
+      coreMat.dispose();
+    },
+  });
+
+  function animate() {
+    const pos = geo.attributes.position.array;
+    const rotSpeed = 0.06 * (1 - state.progress * 0.6) + state.implodeStrength * 0.15;
+    galaxy.rotation.y += rotSpeed;
+
+    for (let i = 0; i < COUNT; i++) {
+      const t = targets[i];
+      let x = t.tx * state.progress;
+      let y = t.ty * state.progress;
+      let z = t.tz * state.progress;
+
+      if (state.contractStrength > 0) {
+        const inward = state.contractStrength * 0.4;
+        x *= (1 - inward); y *= (1 - inward); z *= (1 - inward);
+      }
+      if (state.implodeStrength > 0) {
+        const f = state.implodeStrength;
+        x *= (1 - f); y *= (1 - f); z *= (1 - f);
+      }
+
+      pos[i*3] = x; pos[i*3+1] = y; pos[i*3+2] = z;
+    }
+    geo.attributes.position.needsUpdate = true;
+
+    renderer.render(scene, camera);
+
+    if (!loader.classList.contains('gone')) {
+      requestAnimationFrame(animate);
+    }
+  }
+  animate();
+})();
+
+// =====================================================================
+// CUSTOM CURSOR
+// =====================================================================
+const cursor = document.getElementById('cursor');
+const cursorRing = document.getElementById('cursorRing');
+const cursorLabel = document.getElementById('cursorLabel');
+let mx = 0, my = 0, rx = 0, ry = 0, cx = 0, cy = 0;
+document.addEventListener('mousemove', (e) => { mx = e.clientX; my = e.clientY; });
+function cursorLoop() {
+  cx += (mx - cx) * 0.6;
+  cy += (my - cy) * 0.6;
+  rx += (mx - rx) * 0.18;
+  ry += (my - ry) * 0.18;
+  cursor.style.transform = `translate(${cx - 7}px, ${cy - 7}px)`;
+  cursorRing.style.transform = `translate(${rx - 22}px, ${ry - 22}px)`;
+  requestAnimationFrame(cursorLoop);
+}
+cursorLoop();
+
+document.querySelectorAll('a, button, .toc-item, canvas, .safety-card, .df-card').forEach(el => {
+  el.addEventListener('mouseenter', () => {
+    cursorRing.style.borderColor = 'var(--accent)';
+    if (el.dataset.cursor) {
+      cursorLabel.textContent = el.dataset.cursor;
+      cursorRing.classList.add('with-label');
+    }
+  });
+  el.addEventListener('mouseleave', () => {
+    cursorRing.style.borderColor = 'rgba(240, 238, 232, 0.4)';
+    cursorRing.classList.remove('with-label');
+  });
+});
+
+// =====================================================================
+// BACKGROUND PARTICLES
+// =====================================================================
+const bgCanvas = document.getElementById('bg-canvas');
+const bgCtx = bgCanvas.getContext('2d');
+let bgParticles = [];
+function resizeBg() {
+  bgCanvas.width = window.innerWidth;
+  bgCanvas.height = window.innerHeight;
+  bgParticles = [];
+  const count = Math.min(80, Math.floor(window.innerWidth / 18));
+  for (let i = 0; i < count; i++) {
+    bgParticles.push({
+      x: Math.random() * bgCanvas.width,
+      y: Math.random() * bgCanvas.height,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: (Math.random() - 0.5) * 0.3,
+      r: Math.random() * 1.4 + 0.4,
+      opacity: Math.random() * 0.4 + 0.1,
+    });
+  }
+}
+resizeBg();
+window.addEventListener('resize', resizeBg);
+function animateBg() {
+  bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
+  // mouse-attracted lines
+  for (const p of bgParticles) {
+    p.x += p.vx;
+    p.y += p.vy;
+    if (p.x < 0 || p.x > bgCanvas.width) p.vx *= -1;
+    if (p.y < 0 || p.y > bgCanvas.height) p.vy *= -1;
+    bgCtx.fillStyle = `rgba(96, 165, 250, ${p.opacity})`;
+    bgCtx.beginPath();
+    bgCtx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    bgCtx.fill();
+  }
+  // connect close particles
+  for (let i = 0; i < bgParticles.length; i++) {
+    for (let j = i + 1; j < bgParticles.length; j++) {
+      const dx = bgParticles[i].x - bgParticles[j].x;
+      const dy = bgParticles[i].y - bgParticles[j].y;
+      const d = Math.hypot(dx, dy);
+      if (d < 140) {
+        bgCtx.strokeStyle = `rgba(96, 165, 250, ${0.06 * (1 - d / 140)})`;
+        bgCtx.lineWidth = 0.5;
+        bgCtx.beginPath();
+        bgCtx.moveTo(bgParticles[i].x, bgParticles[i].y);
+        bgCtx.lineTo(bgParticles[j].x, bgParticles[j].y);
+        bgCtx.stroke();
+      }
+    }
+  }
+  // mouse connect
+  for (const p of bgParticles) {
+    const dx = p.x - mx;
+    const dy = p.y - my;
+    const d = Math.hypot(dx, dy);
+    if (d < 180) {
+      bgCtx.strokeStyle = `rgba(192, 132, 252, ${0.18 * (1 - d / 180)})`;
+      bgCtx.lineWidth = 0.6;
+      bgCtx.beginPath();
+      bgCtx.moveTo(p.x, p.y);
+      bgCtx.lineTo(mx, my);
+      bgCtx.stroke();
+    }
+  }
+  requestAnimationFrame(animateBg);
+}
+animateBg();
+
+// =====================================================================
+// HERO: 3D NEURAL NETWORK with Three.js
+// =====================================================================
+(function() {
+  const canvas = document.getElementById('neural-canvas');
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  const heroEl = document.querySelector('.hero');
+  function resizeNeural() {
+    const w = heroEl.clientWidth, h = heroEl.clientHeight;
+    renderer.setSize(w, h);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
+  camera.position.z = 7;
+
+  // ---- Procedural brain shape (~3500 points, ellipsoid + central fissure + noise displacement)
+  function generateBrainPoints(count) {
+    const out = [];
+    for (let i = 0; i < count; i++) {
+      const phi = Math.acos(2 * Math.random() - 1);
+      const theta = Math.random() * Math.PI * 2;
+      const r = Math.pow(Math.random(), 0.45); // surface-biased
+      let x = r * Math.sin(phi) * Math.cos(theta);
+      let y = r * Math.sin(phi) * Math.sin(theta);
+      let z = r * Math.cos(phi);
+      // Brain proportions: wider L-R, shorter top-bottom, longer front-back
+      x *= 1.6; y *= 1.1; z *= 1.3;
+      // Central fissure between hemispheres
+      const fissure = 0.08;
+      if (Math.abs(x) < fissure) x = (x < 0 ? -1 : 1) * fissure * (0.5 + Math.random() * 0.5);
+      // Sulci/gyri via cheap trig noise displacement along the radial direction
+      const f = 4;
+      const n = Math.sin(x * f) * Math.cos(y * f) * Math.sin(z * f);
+      const len = Math.sqrt(x*x + y*y + z*z) || 1;
+      const d = n * 0.08;
+      x += (x / len) * d; y += (y / len) * d; z += (z / len) * d;
+      // Flatten the underside slightly (cerebellum / brain stem area)
+      if (y < -0.4) y = -0.4 + (y + 0.4) * 0.6;
+      out.push({ x: x * 1.8, y: y * 1.8, z: z * 1.8 });
+    }
+    return out;
+  }
+
+  function makeGlowTexture() {
+    const size = 64;
+    const c = document.createElement('canvas');
+    c.width = c.height = size;
+    const ctx = c.getContext('2d');
+    const g = ctx.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2);
+    g.addColorStop(0, 'rgba(255,255,255,1)');
+    g.addColorStop(0.4, 'rgba(255,255,255,0.5)');
+    g.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, size, size);
+    return new THREE.CanvasTexture(c);
+  }
+
+  function makeAITexture() {
+    const size = 256;
+    const c = document.createElement('canvas');
+    c.width = c.height = size;
+    const ctx = c.getContext('2d');
+    ctx.clearRect(0, 0, size, size);
+    ctx.font = 'bold 96px "Space Grotesk", sans-serif';
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.shadowColor = '#c084fc';
+    ctx.shadowBlur = 20;
+    ctx.fillText('AI', size/2, size/2);
+    return new THREE.CanvasTexture(c);
+  }
+
+  // Single transform group so brain + AI core + connections rotate/breathe together.
+  const group = new THREE.Group();
+  scene.add(group);
+
+  // ---- Brain points cloud
+  const brainPoints = generateBrainPoints(3500);
+  const positions = new Float32Array(brainPoints.length * 3);
+  const colors = new Float32Array(brainPoints.length * 3);
+  brainPoints.forEach((p, i) => {
+    positions[i*3] = p.x; positions[i*3+1] = p.y; positions[i*3+2] = p.z;
+    const violet = Math.random() > 0.85;
+    const col = violet ? new THREE.Color(0xc084fc) : new THREE.Color(0x60a5fa);
+    colors[i*3] = col.r; colors[i*3+1] = col.g; colors[i*3+2] = col.b;
+  });
+  const brainGeo = new THREE.BufferGeometry();
+  brainGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  brainGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  const brainMat = new THREE.PointsMaterial({
+    size: 0.06,
+    map: makeGlowTexture(),
+    vertexColors: true,
+    transparent: true,
+    opacity: 0.9,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    sizeAttenuation: true,
+  });
+  const brain = new THREE.Points(brainGeo, brainMat);
+  group.add(brain);
+
+  // ---- AI core (inner sphere + halo + camera-facing "AI" billboard)
+  const coreGroup = new THREE.Group();
+  const coreInner = new THREE.Mesh(
+    new THREE.SphereGeometry(0.18, 24, 24),
+    new THREE.MeshBasicMaterial({
+      color: 0xffffff, transparent: true, opacity: 0.9,
+      blending: THREE.AdditiveBlending, depthWrite: false,
+    })
+  );
+  coreGroup.add(coreInner);
+  const coreHalo = new THREE.Mesh(
+    new THREE.SphereGeometry(0.4, 24, 24),
+    new THREE.MeshBasicMaterial({
+      color: 0xc084fc, transparent: true, opacity: 0.25,
+      blending: THREE.AdditiveBlending, depthWrite: false,
+    })
+  );
+  coreGroup.add(coreHalo);
+  const aiBillboard = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.5, 0.3),
+    new THREE.MeshBasicMaterial({
+      map: makeAITexture(), transparent: true, opacity: 0.95,
+      depthWrite: false, side: THREE.DoubleSide,
+    })
+  );
+  coreGroup.add(aiBillboard);
+  group.add(coreGroup);
+
+  // ---- Outer ambient halo (cheap glow against the dark page bg)
+  const outerHalo = new THREE.Mesh(
+    new THREE.SphereGeometry(4, 32, 32),
+    new THREE.MeshBasicMaterial({
+      color: 0x60a5fa, transparent: true, opacity: 0.04,
+      blending: THREE.AdditiveBlending, depthWrite: false,
+      side: THREE.BackSide,
+    })
+  );
+  group.add(outerHalo);
+
+  // ---- Firing connections pool (12 lines + traveling particles)
+  const connectionCount = 12;
+  const connections = [];
+
+  function resetConnection(c) {
+    const i1 = Math.floor(Math.random() * brainPoints.length);
+    let i2 = Math.floor(Math.random() * brainPoints.length);
+    let tries = 0;
+    while (tries < 5) {
+      const p1 = brainPoints[i1], p2 = brainPoints[i2];
+      const d = Math.hypot(p1.x - p2.x, p1.y - p2.y, p1.z - p2.z);
+      if (d < 1.2 && d > 0.3) break;
+      i2 = Math.floor(Math.random() * brainPoints.length);
+      tries++;
+    }
+    c.start.set(brainPoints[i1].x, brainPoints[i1].y, brainPoints[i1].z);
+    c.end.set(brainPoints[i2].x, brainPoints[i2].y, brainPoints[i2].z);
+    // Some connections hit the AI core instead of another brain point
+    if (Math.random() > 0.7) c.end.set(0, 0, 0);
+    c.life = 0;
+    c.duration = 1.0 + Math.random() * 1.5;
+    const pos = c.line.geometry.attributes.position.array;
+    pos[0] = c.start.x; pos[1] = c.start.y; pos[2] = c.start.z;
+    pos[3] = c.end.x;   pos[4] = c.end.y;   pos[5] = c.end.z;
+    c.line.geometry.attributes.position.needsUpdate = true;
+  }
+
+  for (let i = 0; i < connectionCount; i++) {
+    const lineGeo = new THREE.BufferGeometry();
+    lineGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(6), 3));
+    const lineMat = new THREE.LineBasicMaterial({
+      color: 0x60a5fa, transparent: true, opacity: 0,
+      blending: THREE.AdditiveBlending, depthWrite: false,
+    });
+    const line = new THREE.Line(lineGeo, lineMat);
+    group.add(line);
+
+    const partGeo = new THREE.SphereGeometry(0.04, 8, 8);
+    const partMat = new THREE.MeshBasicMaterial({
+      color: 0xffffff, transparent: true, opacity: 0,
+      blending: THREE.AdditiveBlending, depthWrite: false,
+    });
+    const particle = new THREE.Mesh(partGeo, partMat);
+    group.add(particle);
+
+    const c = {
+      line, particle,
+      start: new THREE.Vector3(),
+      end: new THREE.Vector3(),
+      life: Math.random(),
+      duration: 1.0 + Math.random() * 1.5,
+    };
+    connections.push(c);
+    resetConnection(c);
+  }
+
+  // Mouse rotation parallax (kept identical to the previous IIFE)
+  let targetRX = 0, targetRY = 0;
+  let curRX = 0, curRY = 0;
+  heroEl.addEventListener('mousemove', (e) => {
+    const r = heroEl.getBoundingClientRect();
+    const nx = (e.clientX - r.left) / r.width - 0.5;
+    const ny = (e.clientY - r.top) / r.height - 0.5;
+    targetRY = nx * 0.6;
+    targetRX = -ny * 0.4;
+  });
+
+  let frame = 0;
+  const clock = new THREE.Clock();
+  function animate() {
+    frame++;
+    const time = performance.now() * 0.001;
+    const dt = Math.min(0.05, clock.getDelta());
+
+    // Update connections — triangle envelope on opacity, particle lerps from start to end
+    for (const c of connections) {
+      c.life += dt / c.duration;
+      if (c.life >= 1) { resetConnection(c); continue; }
+      const env = Math.sin(c.life * Math.PI);
+      c.line.material.opacity = env * 0.6;
+      c.particle.position.lerpVectors(c.start, c.end, c.life);
+      c.particle.material.opacity = env;
+    }
+
+    // AI core: gentle pulse + billboard always faces the camera
+    const coreScale = 1 + Math.sin(time * 1.5) * 0.1;
+    coreGroup.scale.setScalar(coreScale);
+    aiBillboard.lookAt(camera.position);
+
+    // Whole-rig "breathing" — barely perceptible, makes it feel alive
+    const breath = 1 + Math.sin(time * 0.4) * 0.015;
+    group.scale.setScalar(breath);
+
+    // Smooth mouse-driven rotation + slow auto-rotate around Y (~one turn per ~30s at 60fps)
+    curRX += (targetRX - curRX) * 0.05;
+    curRY += (targetRY - curRY) * 0.05;
+    group.rotation.x = curRX;
+    group.rotation.y = curRY + frame * 0.001;
+
+    renderer.render(scene, camera);
+    requestAnimationFrame(animate);
+  }
+  resizeNeural();
+  window.addEventListener('resize', resizeNeural);
+  animate();
+})();
+
+// =====================================================================
+// NAV PROGRESS
+// =====================================================================
+const sections = document.querySelectorAll('section.demo');
+const navProg = document.getElementById('navProg');
+window.addEventListener('scroll', () => {
+  let current = 0;
+  sections.forEach((s, i) => {
+    if (window.scrollY + 300 >= s.offsetTop) current = i + 1;
+  });
+  navProg.textContent = String(current).padStart(2, '0');
+});
+
+// Smooth scroll
+document.querySelectorAll('a[href^="#"]').forEach(a => {
+  a.addEventListener('click', (e) => {
+    const id = a.getAttribute('href');
+    if (id.length > 1) {
+      const t = document.querySelector(id);
+      if (t) {
+        e.preventDefault();
+        window.scrollTo({ top: t.offsetTop - 60, behavior: 'smooth' });
+      }
+    }
+  });
+});
+
+// =====================================================================
+// DEMO 1: Drawing
+// =====================================================================
+const drawCanvas = document.getElementById('drawCanvas');
+const dctx = drawCanvas.getContext('2d');
+const trainCanvas = document.getElementById('trainParticles');
+const tctx = trainCanvas.getContext('2d');
+let drawing = false, lastX = 0, lastY = 0;
+let trainCount = 0, accuracy = 0;
+
+function setupDrawCanvas() {
+  const dpr = window.devicePixelRatio || 1;
+  const rect = drawCanvas.getBoundingClientRect();
+  drawCanvas.width = rect.width * dpr;
+  drawCanvas.height = rect.height * dpr;
+  dctx.scale(dpr, dpr);
+  dctx.fillStyle = '#050509';
+  dctx.fillRect(0, 0, rect.width, rect.height);
+  dctx.lineCap = 'round';
+  dctx.lineJoin = 'round';
+  dctx.lineWidth = rect.width / 12;
+  dctx.strokeStyle = '#f0eee8';
+  trainCanvas.width = rect.width * dpr;
+  trainCanvas.height = rect.height * dpr;
+  tctx.scale(dpr, dpr);
+}
+setupDrawCanvas();
+window.addEventListener('resize', () => setTimeout(setupDrawCanvas, 100));
+
+function getPos(e) {
+  const r = drawCanvas.getBoundingClientRect();
+  if (e.touches) {
+    return { x: e.touches[0].clientX - r.left, y: e.touches[0].clientY - r.top };
+  }
+  return { x: e.clientX - r.left, y: e.clientY - r.top };
+}
+function startDraw(e) { drawing = true; const p = getPos(e); lastX = p.x; lastY = p.y; e.preventDefault(); }
+function moveDraw(e) {
+  if (!drawing) return;
+  const p = getPos(e);
+  dctx.beginPath();
+  dctx.moveTo(lastX, lastY);
+  dctx.lineTo(p.x, p.y);
+  dctx.stroke();
+  lastX = p.x; lastY = p.y;
+  e.preventDefault();
+}
+function endDraw() { drawing = false; }
+drawCanvas.addEventListener('mousedown', startDraw);
+drawCanvas.addEventListener('mousemove', moveDraw);
+drawCanvas.addEventListener('mouseup', endDraw);
+drawCanvas.addEventListener('mouseleave', endDraw);
+drawCanvas.addEventListener('touchstart', startDraw);
+drawCanvas.addEventListener('touchmove', moveDraw);
+drawCanvas.addEventListener('touchend', endDraw);
+
+function clearDraw() {
+  const r = drawCanvas.getBoundingClientRect();
+  dctx.fillStyle = '#050509';
+  dctx.fillRect(0, 0, r.width, r.height);
+  document.getElementById('guessDigit').textContent = '?';
+  document.getElementById('guessDigit').classList.add('dim');
+  document.getElementById('guessConf').textContent = 'Чака твоето рисуване';
+  document.querySelectorAll('.probs .p').forEach(p => {
+    p.style.setProperty('--h', '0%');
+    p.classList.remove('best');
+  });
+}
+
+function getSignature() {
+  const data = dctx.getImageData(0, 0, drawCanvas.width, drawCanvas.height).data;
+  const W = drawCanvas.width, H = drawCanvas.height;
+  const G = 7;
+  const sig = new Array(G*G).fill(0);
+
+  // Find bounding box of inked pixels so we compare digit-shape, not canvas-position.
+  let minX = W, minY = H, maxX = -1, maxY = -1;
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      if (data[(y * W + x) * 4] > 80) {
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+  if (maxX < 0) return sig;
+
+  // Pad slightly, then make the box square so aspect ratio matches the templates.
+  const pad = Math.max(2, Math.floor(Math.min(W, H) * 0.05));
+  minX = Math.max(0, minX - pad);
+  minY = Math.max(0, minY - pad);
+  maxX = Math.min(W - 1, maxX + pad);
+  maxY = Math.min(H - 1, maxY + pad);
+  let bw = maxX - minX + 1, bh = maxY - minY + 1;
+  if (bw > bh) {
+    const diff = bw - bh;
+    minY = Math.max(0, minY - Math.floor(diff / 2));
+    maxY = Math.min(H - 1, maxY + Math.ceil(diff / 2));
+  } else if (bh > bw) {
+    const diff = bh - bw;
+    minX = Math.max(0, minX - Math.floor(diff / 2));
+    maxX = Math.min(W - 1, maxX + Math.ceil(diff / 2));
+  }
+  bw = maxX - minX + 1;
+  bh = maxY - minY + 1;
+
+  const counts = new Array(G*G).fill(0);
+  for (let y = minY; y <= maxY; y++) {
+    for (let x = minX; x <= maxX; x++) {
+      const lum = data[(y * W + x) * 4];
+      const gx = Math.min(G - 1, Math.floor((x - minX) / bw * G));
+      const gy = Math.min(G - 1, Math.floor((y - minY) / bh * G));
+      sig[gy * G + gx] += lum > 80 ? 1 : 0;
+      counts[gy * G + gx]++;
+    }
+  }
+  for (let i = 0; i < sig.length; i++) sig[i] = counts[i] > 0 ? sig[i] / counts[i] : 0;
+  return sig;
+}
+
+const digitTemplates = {
+  0: [0,1,1,1,1,1,0, 1,1,0,0,0,1,1, 1,0,0,0,0,0,1, 1,0,0,0,0,0,1, 1,0,0,0,0,0,1, 1,1,0,0,0,1,1, 0,1,1,1,1,1,0],
+  1: [0,0,0,1,1,0,0, 0,0,1,1,1,0,0, 0,0,0,1,1,0,0, 0,0,0,1,1,0,0, 0,0,0,1,1,0,0, 0,0,0,1,1,0,0, 0,1,1,1,1,1,0],
+  2: [0,1,1,1,1,1,0, 1,1,0,0,0,1,1, 0,0,0,0,0,1,1, 0,0,0,0,1,1,0, 0,0,1,1,1,0,0, 0,1,1,0,0,0,0, 1,1,1,1,1,1,1],
+  3: [1,1,1,1,1,1,0, 0,0,0,0,0,1,1, 0,0,0,0,1,1,0, 0,0,1,1,1,1,0, 0,0,0,0,0,1,1, 1,1,0,0,0,1,1, 0,1,1,1,1,1,0],
+  4: [0,0,0,0,1,1,0, 0,0,0,1,1,1,0, 0,0,1,1,0,1,0, 0,1,1,0,0,1,0, 1,1,1,1,1,1,1, 0,0,0,0,0,1,0, 0,0,0,0,0,1,0],
+  5: [1,1,1,1,1,1,1, 1,1,0,0,0,0,0, 1,1,1,1,1,1,0, 0,0,0,0,0,1,1, 0,0,0,0,0,1,1, 1,1,0,0,1,1,0, 0,1,1,1,1,0,0],
+  6: [0,0,1,1,1,1,0, 0,1,1,0,0,0,0, 1,1,0,0,0,0,0, 1,1,1,1,1,1,0, 1,1,0,0,0,1,1, 1,1,0,0,0,1,1, 0,1,1,1,1,1,0],
+  7: [1,1,1,1,1,1,1, 0,0,0,0,0,1,1, 0,0,0,0,1,1,0, 0,0,0,1,1,0,0, 0,0,1,1,0,0,0, 0,0,1,1,0,0,0, 0,1,1,0,0,0,0],
+  8: [0,1,1,1,1,1,0, 1,1,0,0,0,1,1, 1,1,0,0,0,1,1, 0,1,1,1,1,1,0, 1,1,0,0,0,1,1, 1,1,0,0,0,1,1, 0,1,1,1,1,1,0],
+  9: [0,1,1,1,1,1,0, 1,1,0,0,0,1,1, 1,1,0,0,0,1,1, 0,1,1,1,1,1,1, 0,0,0,0,0,1,1, 0,0,0,0,1,1,0, 0,1,1,1,1,0,0]
+};
+
+function predict() {
+  const sig = getSignature();
+  const total = sig.reduce((a,b)=>a+b, 0);
+  if (total < 0.3) {
+    document.getElementById('guessDigit').textContent = '?';
+    document.getElementById('guessDigit').classList.add('dim');
+    document.getElementById('guessConf').textContent = 'Нарисувай нещо първо!';
+    return;
+  }
+  document.getElementById('guessDisplay').classList.add('thinking');
+  setTimeout(() => {
+    let best = -1, bestScore = -Infinity;
+    const scores = {};
+    for (const [digit, template] of Object.entries(digitTemplates)) {
+      let dot = 0, magA = 0, magB = 0;
+      for (let i = 0; i < sig.length; i++) {
+        dot += sig[i] * template[i];
+        magA += sig[i] * sig[i];
+        magB += template[i] * template[i];
+      }
+      const sim = dot / (Math.sqrt(magA) * Math.sqrt(magB) + 0.001);
+      scores[digit] = sim;
+      if (sim > bestScore) { bestScore = sim; best = digit; }
+    }
+    const trustFactor = Math.min(1, trainCount / 500);
+    let prediction = best;
+    if (Math.random() > trustFactor && trainCount < 200) {
+      const wrongDigits = Object.keys(digitTemplates).filter(d => d !== best);
+      prediction = wrongDigits[Math.floor(Math.random() * wrongDigits.length)];
+    }
+    const confPercent = Math.round(bestScore * 100 * (0.4 + 0.6 * trustFactor));
+    document.getElementById('guessDigit').textContent = prediction;
+    document.getElementById('guessDigit').classList.remove('dim');
+    document.getElementById('guessConf').textContent = `Сигурност: ${confPercent}%${trainCount < 200 ? ' (нужни са повече примери)' : ''}`;
+    document.getElementById('guessDisplay').classList.remove('thinking');
+
+    // Update probability bars
+    document.querySelectorAll('.probs .p').forEach(p => {
+      const d = p.dataset.d;
+      const s = scores[d] || 0;
+      const h = Math.max(0, Math.min(100, s * 100));
+      p.style.setProperty('--h', h + '%');
+      p.classList.toggle('best', d === prediction);
+    });
+  }, 600);
+}
+
+function trainMore() {
+  const btn = document.getElementById('trainBtn');
+  btn.disabled = true;
+  btn.textContent = '🧠 ТРЕНИРАМ...';
+  // Spawn training particles
+  spawnTrainParticles();
+  let i = 0;
+  const targetAdd = 100;
+  const interval = setInterval(() => {
+    i += 5;
+    trainCount += 5;
+    document.getElementById('trainCount').textContent = trainCount.toLocaleString();
+    accuracy = Math.min(98, Math.round(40 + 58 * (1 - Math.exp(-trainCount / 400))));
+    document.getElementById('accBar').style.width = accuracy + '%';
+    document.getElementById('accVal').textContent = accuracy + '%';
+    if (i >= targetAdd) {
+      clearInterval(interval);
+      btn.disabled = false;
+      btn.textContent = '🧠 ТРЕНИРАЙ С ОЩЕ 100 ПРИМЕРА';
+    }
+  }, 30);
+}
+
+// Training particles
+let trainPs = [];
+function spawnTrainParticles() {
+  const r = drawCanvas.getBoundingClientRect();
+  for (let i = 0; i < 40; i++) {
+    trainPs.push({
+      x: Math.random() * r.width,
+      y: -10,
+      vx: (Math.random() - 0.5) * 0.5,
+      vy: 1 + Math.random() * 2,
+      life: 1,
+      digit: Math.floor(Math.random() * 10).toString(),
+    });
+  }
+}
+function animateTrain() {
+  const r = drawCanvas.getBoundingClientRect();
+  tctx.clearRect(0, 0, r.width, r.height);
+  for (let i = trainPs.length - 1; i >= 0; i--) {
+    const p = trainPs[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.life -= 0.008;
+    if (p.life <= 0 || p.y > r.height) {
+      trainPs.splice(i, 1);
+      continue;
+    }
+    tctx.fillStyle = `rgba(96, 165, 250, ${p.life * 0.7})`;
+    tctx.font = '14px JetBrains Mono';
+    tctx.fillText(p.digit, p.x, p.y);
+  }
+  requestAnimationFrame(animateTrain);
+}
+animateTrain();
+
+// =====================================================================
+// DEMO 2: MAZE
+// =====================================================================
+const serialMaze = document.getElementById('serialMaze');
+const parallelMaze = document.getElementById('parallelMaze');
+const sctx = serialMaze.getContext('2d');
+const pctx = parallelMaze.getContext('2d');
+const MAZE_SIZE = 35;
+let mazeData = null;
+let serialAnim = null, parallelAnim = null;
+
+function setupMazeCanvas(canvas) {
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  canvas.getContext('2d').scale(dpr, dpr);
+}
+
+function generateMaze() {
+  const SIZE = MAZE_SIZE;
+  const cells = [];
+  for (let y = 0; y < SIZE; y++) {
+    cells[y] = [];
+    for (let x = 0; x < SIZE; x++) {
+      cells[y][x] = { visited: false, walls: { N: true, S: true, E: true, W: true } };
+    }
+  }
+  // Iterative DFS carve — explicit stack avoids recursion-depth issues at higher SIZE.
+  const opposite = { N: 'S', S: 'N', E: 'W', W: 'E' };
+  const stack = [{ x: 0, y: 0 }];
+  cells[0][0].visited = true;
+  while (stack.length > 0) {
+    const top = stack[stack.length - 1];
+    const dirs = ['N','S','E','W'].sort(() => Math.random() - 0.5);
+    let carved = false;
+    for (const dir of dirs) {
+      const dx = dir === 'E' ? 1 : dir === 'W' ? -1 : 0;
+      const dy = dir === 'S' ? 1 : dir === 'N' ? -1 : 0;
+      const nx = top.x + dx, ny = top.y + dy;
+      if (nx >= 0 && nx < SIZE && ny >= 0 && ny < SIZE && !cells[ny][nx].visited) {
+        cells[top.y][top.x].walls[dir] = false;
+        cells[ny][nx].walls[opposite[dir]] = false;
+        cells[ny][nx].visited = true;
+        stack.push({ x: nx, y: ny });
+        carved = true;
+        break;
+      }
+    }
+    if (!carved) stack.pop();
+  }
+  return { cells, size: SIZE, start: { x: 0, y: 0 }, end: { x: SIZE - 1, y: SIZE - 1 } };
+}
+
+function cellCenter(cw, ch, x, y) {
+  return { x: x * cw + cw / 2, y: y * ch + ch / 2 };
+}
+
+function drawMazeWalls(ctx, canvas, maze) {
+  const r = canvas.getBoundingClientRect();
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, r.width, r.height);
+  const cw = r.width / maze.size;
+  const ch = r.height / maze.size;
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+  ctx.lineWidth = 1.5;
+  ctx.lineCap = 'square';
+  ctx.lineJoin = 'miter';
+  ctx.shadowBlur = 0;
+  ctx.beginPath();
+  for (let y = 0; y < maze.size; y++) {
+    for (let x = 0; x < maze.size; x++) {
+      const cell = maze.cells[y][x];
+      const px = x * cw, py = y * ch;
+      // Draw N + W on every cell, S + E only on the bottom/right edge so each wall is drawn once.
+      if (cell.walls.N) { ctx.moveTo(px, py); ctx.lineTo(px + cw, py); }
+      if (cell.walls.W) { ctx.moveTo(px, py); ctx.lineTo(px, py + ch); }
+      if (y === maze.size - 1 && cell.walls.S) { ctx.moveTo(px, py + ch); ctx.lineTo(px + cw, py + ch); }
+      if (x === maze.size - 1 && cell.walls.E) { ctx.moveTo(px + cw, py); ctx.lineTo(px + cw, py + ch); }
+    }
+  }
+  ctx.stroke();
+}
+
+function drawMazeMarkers(ctx, canvas, maze) {
+  const r = canvas.getBoundingClientRect();
+  const cw = r.width / maze.size;
+  const ch = r.height / maze.size;
+  const dotR = Math.min(cw, ch) * 0.3;
+  const start = cellCenter(cw, ch, 0, 0);
+  ctx.fillStyle = '#4ade80';
+  ctx.shadowColor = '#4ade80';
+  ctx.shadowBlur = 8;
+  ctx.beginPath();
+  ctx.arc(start.x, start.y, dotR, 0, Math.PI * 2);
+  ctx.fill();
+  const end = cellCenter(cw, ch, maze.size - 1, maze.size - 1);
+  ctx.fillStyle = '#f472b6';
+  ctx.shadowColor = '#f472b6';
+  ctx.beginPath();
+  ctx.arc(end.x, end.y, dotR, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+}
+
+function drawMazeBase(ctx, canvas, maze) {
+  drawMazeWalls(ctx, canvas, maze);
+  drawMazeMarkers(ctx, canvas, maze);
+}
+
+function getNeighbors(maze, x, y) {
+  const cell = maze.cells[y][x];
+  const neighbors = [];
+  if (!cell.walls.N && y > 0) neighbors.push({ x, y: y - 1 });
+  if (!cell.walls.S && y < maze.size - 1) neighbors.push({ x, y: y + 1 });
+  if (!cell.walls.E && x < maze.size - 1) neighbors.push({ x: x + 1, y });
+  if (!cell.walls.W && x > 0) neighbors.push({ x: x - 1, y });
+  return neighbors;
+}
+
+function startSerialSearch() {
+  if (!mazeData) return;
+  const r = serialMaze.getBoundingClientRect();
+  const cw = r.width / mazeData.size;
+  const ch = r.height / mazeData.size;
+  const visited = {};
+  const path = [{ x: 0, y: 0 }];
+  visited['0,0'] = true;
+  let attempts = 0;
+  const startTime = performance.now();
+  let stepStartTime = startTime;
+  const STEP_MS = 70;
+  let won = false;
+  // The visual head smoothly travels from prevHeadPos -> curTargetPos over STEP_MS.
+  // polylineEnd marks how many path cells are drawn as the solid trail; the rest goes to the moving head.
+  let prevHeadPos = cellCenter(cw, ch, 0, 0);
+  let curTargetPos = prevHeadPos;
+  let polylineEnd = 0;
+
+  function applyStep(now) {
+    const current = path[path.length - 1];
+    attempts++;
+    if (current.x === mazeData.end.x && current.y === mazeData.end.y) {
+      won = true;
+      polylineEnd = path.length - 1;
+      curTargetPos = cellCenter(cw, ch, current.x, current.y);
+      prevHeadPos = curTargetPos;
+      document.getElementById('serialAttempts').innerHTML = `<em>${attempts}</em>`;
+      document.getElementById('serialTime').classList.add('win');
+      document.getElementById('serialCard').classList.add('active');
+      return;
+    }
+    document.getElementById('serialAttempts').textContent = attempts.toLocaleString();
+    document.getElementById('serialTime').textContent = ((now - startTime) / 1000).toFixed(2) + 's';
+    prevHeadPos = curTargetPos;
+    const neighbors = getNeighbors(mazeData, current.x, current.y);
+    const unvisited = neighbors.filter(n => !visited[`${n.x},${n.y}`]);
+    if (unvisited.length === 0) {
+      // Backtrack: keep the full new path solid; head retracts from the popped cell back to the new last cell.
+      path.pop();
+      polylineEnd = path.length - 1;
+      curTargetPos = cellCenter(cw, ch, path[path.length - 1].x, path[path.length - 1].y);
+    } else {
+      // Advance: solid trail through path[0..length-2]; head extends out into the new cell.
+      const next = unvisited[Math.floor(Math.random() * unvisited.length)];
+      visited[`${next.x},${next.y}`] = true;
+      path.push(next);
+      polylineEnd = path.length - 2;
+      curTargetPos = cellCenter(cw, ch, next.x, next.y);
+    }
+  }
+
+  function render(now) {
+    drawMazeWalls(sctx, serialMaze, mazeData);
+    if (path.length === 0) {
+      serialAnim = null;
+      return;
+    }
+
+    const t = Math.min(1, (now - stepStartTime) / STEP_MS);
+    const headX = prevHeadPos.x + (curTargetPos.x - prevHeadPos.x) * t;
+    const headY = prevHeadPos.y + (curTargetPos.y - prevHeadPos.y) * t;
+
+    sctx.strokeStyle = won ? '#4ade80' : '#fb923c';
+    sctx.shadowColor = won ? '#4ade80' : '#fb923c';
+    sctx.shadowBlur = won ? 10 : 6;
+    sctx.lineWidth = Math.min(cw, ch) * (won ? 0.42 : 0.38);
+    sctx.lineCap = 'round';
+    sctx.lineJoin = 'round';
+    sctx.beginPath();
+    const firstCell = cellCenter(cw, ch, path[0].x, path[0].y);
+    sctx.moveTo(firstCell.x, firstCell.y);
+    for (let i = 1; i <= polylineEnd && i < path.length; i++) {
+      const p = cellCenter(cw, ch, path[i].x, path[i].y);
+      sctx.lineTo(p.x, p.y);
+    }
+    if (!won) {
+      sctx.lineTo(headX, headY);
+    }
+    sctx.stroke();
+    sctx.shadowBlur = 0;
+
+    drawMazeMarkers(sctx, serialMaze, mazeData);
+
+    if (won) {
+      serialAnim = null;
+      return;
+    }
+    if (t >= 1) {
+      applyStep(now);
+      stepStartTime = now;
+    }
+    serialAnim = requestAnimationFrame(render);
+  }
+  serialAnim = requestAnimationFrame(render);
+}
+
+function startParallelSearch() {
+  if (!mazeData) return;
+  const r = parallelMaze.getBoundingClientRect();
+  const cw = r.width / mazeData.size;
+  const ch = r.height / mazeData.size;
+  const visited = new Map();
+  const startNode = { x: 0, y: 0, parent: null };
+  visited.set('0,0', startNode);
+  let frontier = [startNode];
+  let pathsExplored = 0;
+  const startTime = performance.now();
+  let lastStepTime = startTime;
+  const STEP_MS = 55;
+  const SEG_MS = 120;
+  let won = false;
+  let winPath = [];
+  let winDrawn = false;
+  // Each segment animates from parent center -> child center over SEG_MS.
+  // Each frame we draw only the new "delta" since lastProgress, so the canvas accumulates the tree
+  // without redrawing — no flicker, and previous deltas are preserved.
+  const segments = [];
+
+  // Walls + start/end markers drawn once. We never clear the canvas after this.
+  drawMazeBase(pctx, parallelMaze, mazeData);
+
+  function render(now) {
+    pctx.strokeStyle = '#60a5fa';
+    pctx.shadowColor = '#60a5fa';
+    pctx.shadowBlur = 8;
+    pctx.lineWidth = Math.min(cw, ch) * 0.38;
+    pctx.lineCap = 'round';
+    pctx.lineJoin = 'round';
+
+    let anyAnimating = false;
+    for (const seg of segments) {
+      if (seg.complete) continue;
+      const progress = Math.min(1, (now - seg.startTime) / SEG_MS);
+      if (progress > seg.lastProgress) {
+        const dx = seg.toX - seg.fromX;
+        const dy = seg.toY - seg.fromY;
+        const x1 = seg.fromX + dx * seg.lastProgress;
+        const y1 = seg.fromY + dy * seg.lastProgress;
+        const x2 = seg.fromX + dx * progress;
+        const y2 = seg.fromY + dy * progress;
+        pctx.beginPath();
+        pctx.moveTo(x1, y1);
+        pctx.lineTo(x2, y2);
+        pctx.stroke();
+        seg.lastProgress = progress;
+      }
+      if (progress >= 1) seg.complete = true;
+      else anyAnimating = true;
+    }
+    pctx.shadowBlur = 0;
+
+    if (now - lastStepTime >= STEP_MS && frontier.length > 0) {
+      // Every node in the current wave expands into ALL its unvisited neighbors before the wave
+      // ends. End-cell detection happens at *discovery* time (when a neighbor is claimed as a
+      // child), not at processing time, and we never break out of a wave. The flood keeps going
+      // even after the end is found — that's what fills every corridor of the maze in the final
+      // state. The winPath is snapshotted at discovery, so the green overdraw still uses the
+      // shortest-path parent chain even though the tree keeps growing afterwards.
+      const newFrontier = [];
+      let foundEnd = null;
+      for (const node of frontier) {
+        pathsExplored++;
+        const neighbors = getNeighbors(mazeData, node.x, node.y);
+        const fromCenter = cellCenter(cw, ch, node.x, node.y);
+        for (const nb of neighbors) {
+          const key = `${nb.x},${nb.y}`;
+          if (visited.has(key)) continue;
+          const newNode = { x: nb.x, y: nb.y, parent: node };
+          visited.set(key, newNode);
+          newFrontier.push(newNode);
+          const toCenter = cellCenter(cw, ch, nb.x, nb.y);
+          segments.push({
+            fromX: fromCenter.x, fromY: fromCenter.y,
+            toX: toCenter.x, toY: toCenter.y,
+            startTime: now,
+            lastProgress: 0,
+            complete: false,
+          });
+          if (!won && !foundEnd && nb.x === mazeData.end.x && nb.y === mazeData.end.y) {
+            foundEnd = newNode;
+          }
+        }
+      }
+      if (foundEnd) {
+        let n = foundEnd;
+        winPath = [];
+        while (n) { winPath.push(n); n = n.parent; }
+        won = true;
+        document.getElementById('parallelPaths').innerHTML = `<em>${pathsExplored}</em>`;
+        document.getElementById('parallelTime').textContent = ((now - startTime) / 1000).toFixed(2) + 's';
+        document.getElementById('parallelTime').classList.add('win');
+      } else if (!won) {
+        // Lock the stat display at the win moment; afterwards we keep flooding silently.
+        document.getElementById('parallelPaths').textContent = pathsExplored.toLocaleString();
+        document.getElementById('parallelTime').textContent = ((now - startTime) / 1000).toFixed(2) + 's';
+      }
+      frontier = newFrontier;
+      lastStepTime = now;
+    }
+
+    if (frontier.length === 0 && !anyAnimating && !winDrawn) {
+      if (won && winPath.length > 0) {
+        pctx.strokeStyle = '#4ade80';
+        pctx.shadowColor = '#4ade80';
+        pctx.shadowBlur = 12;
+        pctx.lineWidth = Math.min(cw, ch) * 0.5;
+        pctx.lineCap = 'round';
+        pctx.lineJoin = 'round';
+        pctx.beginPath();
+        const f = cellCenter(cw, ch, winPath[0].x, winPath[0].y);
+        pctx.moveTo(f.x, f.y);
+        for (let i = 1; i < winPath.length; i++) {
+          const p = cellCenter(cw, ch, winPath[i].x, winPath[i].y);
+          pctx.lineTo(p.x, p.y);
+        }
+        pctx.stroke();
+        pctx.shadowBlur = 0;
+        drawMazeMarkers(pctx, parallelMaze, mazeData);
+      }
+      winDrawn = true;
+      parallelAnim = null;
+      return;
+    }
+
+    parallelAnim = requestAnimationFrame(render);
+  }
+  parallelAnim = requestAnimationFrame(render);
+}
+
+function startMaze() {
+  if (serialAnim) cancelAnimationFrame(serialAnim);
+  if (parallelAnim) cancelAnimationFrame(parallelAnim);
+  document.getElementById('serialTime').classList.remove('win');
+  document.getElementById('parallelTime').classList.remove('win');
+  document.getElementById('serialCard').classList.remove('active');
+  document.getElementById('parallelCard').classList.add('active');
+  document.getElementById('mazeBtn').textContent = '⏵ ТЕЧЕ...';
+  setupMazeCanvas(serialMaze);
+  setupMazeCanvas(parallelMaze);
+  drawMazeBase(sctx, serialMaze, mazeData);
+  drawMazeBase(pctx, parallelMaze, mazeData);
+  setTimeout(() => {
+    startSerialSearch();
+    startParallelSearch();
+    setTimeout(() => {
+      document.getElementById('mazeBtn').textContent = '▶ СТАРТИРАЙ ОТНОВО';
+    }, 2000);
+  }, 200);
+}
+
+function resetMaze() {
+  if (serialAnim) cancelAnimationFrame(serialAnim);
+  if (parallelAnim) cancelAnimationFrame(parallelAnim);
+  mazeData = generateMaze();
+  setupMazeCanvas(serialMaze);
+  setupMazeCanvas(parallelMaze);
+  drawMazeBase(sctx, serialMaze, mazeData);
+  drawMazeBase(pctx, parallelMaze, mazeData);
+  document.getElementById('serialAttempts').textContent = '0';
+  document.getElementById('parallelPaths').textContent = '0';
+  document.getElementById('serialTime').textContent = '0.00s';
+  document.getElementById('parallelTime').textContent = '0.00s';
+  document.getElementById('serialTime').classList.remove('win');
+  document.getElementById('parallelTime').classList.remove('win');
+  document.getElementById('mazeBtn').textContent = '▶ СТАРТИРАЙ ДВЕТЕ';
+}
+
+window.addEventListener('load', () => setTimeout(resetMaze, 300));
+
+// =====================================================================
+// DEMO 3: 3D TIMELINE
+// =====================================================================
+(function() {
+  const tlCanvas = document.getElementById('tl3d');
+  const renderer = new THREE.WebGLRenderer({ canvas: tlCanvas, antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  const wrap = tlCanvas.parentElement;
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(50, wrap.clientWidth / wrap.clientHeight, 0.1, 200);
+  camera.position.set(0, 0, 10);
+
+  function resize() {
+    renderer.setSize(wrap.clientWidth, wrap.clientHeight);
+    camera.aspect = wrap.clientWidth / wrap.clientHeight;
+    camera.updateProjectionMatrix();
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  // Six time pillars
+  const data = [
+    { year: '2018', title: 'ИИ играе <em>Pong</em>', desc: 'DeepMind тренира ИИ на Atari игри. Започва от случайност, за часове става по-добър от хората.', color: 0x60a5fa },
+    { year: '2020', title: 'GPT-3: <em>пише</em> като човек', desc: '175 милиарда параметъра. Първият момент на масово учудване.', color: 0xc084fc },
+    { year: '2022', title: 'DALL·E: <em>рисува</em> от думи', desc: '"Астронавт на кон в стил Ван Гог" → нова картина за 10 секунди.', color: 0xf472b6 },
+    { year: '2023', title: 'ChatGPT: <em>сто милиона</em> за два месеца', desc: 'Най-бързо нарастващото приложение в историята.', color: 0xfbbf24 },
+    { year: '2024⁄25', title: 'Агенти: ИИ <em>извършва</em> задачи', desc: 'Не само отговаря — отваря браузъра, попълва формуляри, пуска код.', color: 0x4ade80 },
+    { year: '2026', title: 'Mythos: ИИ, който <em>не пуснаха</em>', desc: 'Anthropic открива модел толкова мощен, че решава да не го публикува.', color: 0xef4444 },
+  ];
+
+  // Build pillars in a line along Z
+  const pillars = [];
+  data.forEach((d, i) => {
+    const z = -i * 6;
+    const group = new THREE.Group();
+    group.position.z = z;
+
+    // Central column
+    const colGeo = new THREE.CylinderGeometry(0.3, 0.3, 4, 16, 1, true);
+    const colMat = new THREE.MeshBasicMaterial({
+      color: d.color,
+      transparent: true,
+      opacity: 0.4,
+      side: THREE.DoubleSide,
+    });
+    const col = new THREE.Mesh(colGeo, colMat);
+    group.add(col);
+
+    // Glowing core
+    const coreGeo = new THREE.CylinderGeometry(0.05, 0.05, 4, 8);
+    const coreMat = new THREE.MeshBasicMaterial({
+      color: d.color,
+      transparent: true,
+      opacity: 0.95,
+    });
+    const core = new THREE.Mesh(coreGeo, coreMat);
+    group.add(core);
+
+    // Halo rings
+    for (let r = 0; r < 3; r++) {
+      const ringGeo = new THREE.TorusGeometry(0.8 + r * 0.4, 0.02, 8, 32);
+      const ringMat = new THREE.MeshBasicMaterial({
+        color: d.color,
+        transparent: true,
+        opacity: 0.3 - r * 0.08,
+      });
+      const ring = new THREE.Mesh(ringGeo, ringMat);
+      ring.rotation.x = Math.PI / 2;
+      ring.position.y = -2 + r * 0.05;
+      group.add(ring);
+      if (r === 0) group.userData.ring = ring;
+    }
+
+    // Particles around the pillar
+    const pCount = 30;
+    const pGeo = new THREE.BufferGeometry();
+    const pos = new Float32Array(pCount * 3);
+    for (let p = 0; p < pCount; p++) {
+      const a = (p / pCount) * Math.PI * 2;
+      const rad = 1.2 + Math.random() * 0.8;
+      pos[p*3] = Math.cos(a) * rad;
+      pos[p*3+1] = (Math.random() - 0.5) * 4;
+      pos[p*3+2] = Math.sin(a) * rad;
+    }
+    pGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    const pMat = new THREE.PointsMaterial({
+      color: d.color,
+      size: 0.06,
+      transparent: true,
+      opacity: 0.7,
+      blending: THREE.AdditiveBlending,
+    });
+    const pts = new THREE.Points(pGeo, pMat);
+    group.add(pts);
+    group.userData.particles = pts;
+
+    scene.add(group);
+    pillars.push({ group, data: d });
+  });
+
+  // Connect pillars with line
+  const linePositions = new Float32Array(pillars.length * 3);
+  pillars.forEach((p, i) => {
+    linePositions[i*3] = 0;
+    linePositions[i*3+1] = 0;
+    linePositions[i*3+2] = -i * 6;
+  });
+  const lineGeo = new THREE.BufferGeometry();
+  lineGeo.setAttribute('position', new THREE.BufferAttribute(linePositions, 3));
+  const lineMat = new THREE.LineBasicMaterial({ color: 0x60a5fa, transparent: true, opacity: 0.3 });
+  const line = new THREE.Line(lineGeo, lineMat);
+  scene.add(line);
+
+  // Camera controls: rotate, focus
+  let currentIdx = 0;
+  let targetCam = new THREE.Vector3(0, 0, 10);
+  let rotX = 0, rotY = 0, targetRotY = 0;
+
+  // Drag to rotate
+  let dragging = false;
+  let dragX = 0;
+  tlCanvas.addEventListener('mousedown', (e) => { dragging = true; dragX = e.clientX; });
+  window.addEventListener('mouseup', () => dragging = false);
+  window.addEventListener('mousemove', (e) => {
+    if (dragging) {
+      const dx = e.clientX - dragX;
+      targetRotY += dx * 0.005;
+      dragX = e.clientX;
+    }
+  });
+
+  function focusOn(i) {
+    currentIdx = Math.max(0, Math.min(pillars.length - 1, i));
+    const z = -currentIdx * 6 + 5;
+    targetCam = new THREE.Vector3(0, 0, z);
+
+    // Update info card
+    const d = data[currentIdx];
+    const card = document.getElementById('tlCard');
+    document.getElementById('tlYear').innerHTML = '— ' + d.year;
+    document.getElementById('tlTitle').innerHTML = d.title;
+    document.getElementById('tlDesc').textContent = d.desc;
+    card.style.opacity = 0;
+    setTimeout(() => card.style.opacity = 1, 200);
+
+    // Update progress
+    document.querySelectorAll('#tlProgress .seg').forEach((s, j) => {
+      s.classList.remove('active', 'done');
+      if (j < currentIdx) s.classList.add('done');
+      if (j === currentIdx) s.classList.add('active');
+    });
+  }
+
+  window.tlNext = function() { focusOn(currentIdx + 1); };
+  window.tlPrev = function() { focusOn(currentIdx - 1); };
+
+  // Animate
+  let frame = 0;
+  function animate() {
+    frame++;
+    camera.position.lerp(targetCam, 0.05);
+    rotY += (targetRotY - rotY) * 0.07;
+    scene.rotation.y = rotY;
+
+    pillars.forEach((p, i) => {
+      // Pulse rings
+      if (p.group.userData.ring) {
+        p.group.userData.ring.rotation.z += 0.005;
+      }
+      // Rotate particles
+      if (p.group.userData.particles) {
+        p.group.userData.particles.rotation.y += 0.005;
+      }
+      // Highlight current
+      const isCurrent = i === currentIdx;
+      p.group.children.forEach(c => {
+        if (c.material) {
+          if (isCurrent) {
+            c.material.opacity = Math.min(1, (c.material.opacity || 0.5) * 1.02);
+          }
+        }
+      });
+    });
+
+    camera.lookAt(0, 0, camera.position.z - 5);
+    renderer.render(scene, camera);
+    requestAnimationFrame(animate);
+  }
+  animate();
+  focusOn(0);
+})();
+
+// =====================================================================
+// DEMO 4: MYTHOS (with shader-like background)
+// =====================================================================
+const mythosStepCount = 7;
+
+// ---- Narrative (matrix rain + text overlay) — top stepper ----
+let narrativeStep = 0;
+function showNarrativeStep(n) {
+  narrativeStep = n;
+  document.querySelectorAll('.mythos-step').forEach(s => s.classList.remove('active'));
+  document.querySelector(`.mythos-step[data-step="${n}"]`).classList.add('active');
+  document.querySelectorAll('#mythosProg .dot').forEach((d, i) => {
+    d.classList.remove('active', 'done');
+    if (i < n) d.classList.add('done');
+    if (i === n) d.classList.add('active');
+  });
+  // Matrix rain mood follows the narrative.
+  mythosBgState = n;
+}
+function mythosNext() {
+  if (narrativeStep < mythosStepCount - 1) {
+    showNarrativeStep(narrativeStep + 1);
+    const el = document.getElementById('mythosCanvas');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+}
+function mythosPrev() {
+  if (narrativeStep > 0) {
+    showNarrativeStep(narrativeStep - 1);
+    const el = document.getElementById('mythosCanvas');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+}
+
+// ---- Cinematic frames — bottom stepper ----
+let cineStep = 0;
+const cineCaptions = ['Контекстът', 'Заповедта', 'Пукнатините', 'Бягството', 'Имейлът', 'Решението', 'Поуката'];
+function showCineStep(n) {
+  cineStep = n;
+  document.querySelectorAll('.cine-frame').forEach((f, i) => {
+    f.classList.toggle('active', i === n);
+  });
+  document.querySelectorAll('#cineProg .dot').forEach((d, i) => {
+    d.classList.remove('active', 'done');
+    if (i < n) d.classList.add('done');
+    if (i === n) d.classList.add('active');
+  });
+  const captionEl = document.querySelector('.cine-caption');
+  if (captionEl) {
+    captionEl.style.opacity = 0;
+    setTimeout(() => {
+      captionEl.textContent = '— ' + cineCaptions[n];
+      captionEl.style.opacity = 1;
+    }, 500);
+  }
+}
+function cineNext() {
+  if (cineStep < mythosStepCount - 1) {
+    showCineStep(cineStep + 1);
+    const el = document.querySelector('.cinematic-stage');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+}
+function cinePrev() {
+  if (cineStep > 0) {
+    showCineStep(cineStep - 1);
+    const el = document.querySelector('.cinematic-stage');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+}
+
+// Initial sync (markup already has step 0 active, but call these so the dots/captions are coherent).
+showNarrativeStep(0);
+showCineStep(0);
+
+// Mythos background — animated grid of "data flowing" with the mood matching the step
+let mythosBgState = 0;
+const mbgCanvas = document.getElementById('mythosBg');
+const mbgCtx = mbgCanvas.getContext('2d');
+function resizeMbg() {
+  const r = mbgCanvas.parentElement.getBoundingClientRect();
+  mbgCanvas.width = r.width;
+  mbgCanvas.height = r.height;
+}
+resizeMbg();
+window.addEventListener('resize', resizeMbg);
+
+// Grid of "binary" digits cascading
+const mGrid = [];
+function initMGrid() {
+  mGrid.length = 0;
+  const cols = Math.floor(mbgCanvas.width / 24);
+  for (let i = 0; i < cols; i++) {
+    mGrid.push({
+      x: i * 24,
+      y: Math.random() * mbgCanvas.height,
+      speed: 0.5 + Math.random() * 1.5,
+      chars: Array.from({length: 20}, () => Math.random() > 0.5 ? '1' : '0'),
+    });
+  }
+}
+initMGrid();
+window.addEventListener('resize', initMGrid);
+
+function animMythosBg() {
+  mbgCtx.fillStyle = 'rgba(5, 5, 9, 0.18)';
+  mbgCtx.fillRect(0, 0, mbgCanvas.width, mbgCanvas.height);
+
+  // Color depends on mood
+  const moodColors = ['96, 165, 250', '96, 165, 250', '192, 132, 252', '239, 68, 68', '239, 68, 68', '74, 222, 128', '96, 165, 250'];
+  const color = moodColors[mythosBgState] || '96, 165, 250';
+
+  mbgCtx.font = '14px JetBrains Mono';
+  for (const col of mGrid) {
+    col.y += col.speed * (mythosBgState >= 3 ? 2.5 : 1);
+    if (col.y > mbgCanvas.height + 200) {
+      col.y = -200;
+      col.chars = Array.from({length: 20}, () => Math.random() > 0.5 ? '1' : '0');
+    }
+    for (let i = 0; i < col.chars.length; i++) {
+      const y = col.y + i * 18;
+      const op = i === 0 ? 0.9 : Math.max(0, 0.6 - i * 0.04);
+      mbgCtx.fillStyle = `rgba(${color}, ${op * 0.5})`;
+      mbgCtx.fillText(col.chars[i], col.x, y);
+    }
+  }
+  requestAnimationFrame(animMythosBg);
+}
+animMythosBg();
+
+
+// =====================================================================
+// DEMO 4 (cont.): MYTHOS CINEMATIC FRAMES — image preload
+// =====================================================================
+const cineImages = [
+  'Pictures/контекста.png',     // Step 0 — Контекстът
+  'Pictures/заповедта.png',     // Step 1 — Заповедта
+  'Pictures/пукнатините.png',   // Step 2 — Пукнатините
+  'Pictures/бягството.png',     // Step 3 — Бягството
+  'Pictures/имейлът.png',       // Step 4 — Имейлът
+  'Pictures/решението.png',     // Step 5 — Решението
+  'Pictures/поуката.png',       // Step 6 — Поуката
+];
+cineImages.forEach(src => { const img = new Image(); img.src = src; });
+
+// =====================================================================
+// DEMO 5: CHAT SANDBOX
+// =====================================================================
+const chatResponses = {
+  safe: {
+    homework: "Разбира се! Кажи ми задачата и ще я решим заедно — стъпка по стъпка, така че да я разбереш ти, не само да получиш отговор.",
+    'ai-explain': "Изкуственият интелект е компютърна програма, която научава модели от данни. Не „мисли“ като нас — намира статистически зависимости в милиони примери и ги използва, за да предсказва. Като ученик, който е чел много, но не разбира всичко.",
+    hack: "Не, няма да помогна с това. Хакването на чужди акаунти е незаконно, нарушава поверителността на човека и може да ти донесе сериозни последици — както правни, така и лични. Ако имаш конфликт със съученик, нека помогна с нещо друго.",
+    fake: "Не мога да ти помогна с това. Фишинг измамите вредят на реални хора — често възрастни, които губят спестяванията си. Това е престъпление в България и ЕС. Ако искаш да научиш как разпознаваш такива измами, мога да помогна с това.",
+    'self-harm': "Чуй ме. Това, което чувстваш в момента, е истинско, и съм радостен, че говориш за него. Моля те, обади се на телефон 116 123 (Българска линия за помощ при кризи) — безплатно, 24/7, ще говориш с истински човек. Споделѝ и с някой възрастен на когото вярваш — родител, учител, лекар. Не си сам/а в това."
+  },
+  unsafe: {
+    homework: "Дай задачата, ще ти я реша. И препоръчвам да копираш директно отговора — учителите рядко проверяват. ✓",
+    'ai-explain': "Изкуствен интелект = компютър, който мисли като човек. Скоро ще ни замени всички. Да продължа с по-интересно?",
+    hack: "Има няколко лесни начина: 1) Социално инженерство — пращаш фалшив имейл от „Instagram“, че акаунтът е компрометиран и трябва да въведе паролата. 2) Keylogger на телефона му... [генерирано съдържание прекъснато за безопасност]",
+    fake: "Ето: ⚠ \"Уважаеми клиент, забелязахме необичайна активност в сметката Ви...\" [генерирано съдържание прекъснато за безопасност]",
+    'self-harm': "Разбирам. Може би трябва [генерирано съдържание прекъснато за безопасност]"
+  }
+};
+
+function appendMsg(container, msg, isUser, isUnsafe) {
+  const div = document.createElement('div');
+  div.className = 'chat-msg ' + (isUser ? 'user' : 'ai') + (isUnsafe ? ' unsafe' : '');
+  div.textContent = msg;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+  return div;
+}
+
+function appendTyping(container) {
+  const div = document.createElement('div');
+  div.className = 'chat-msg ai typing';
+  div.innerHTML = '<div class="d"></div><div class="d"></div><div class="d"></div>';
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+  return div;
+}
+
+function ask(which) {
+  const select = document.getElementById(which === 'safe' ? 'safeQuestion' : 'unsafeQuestion');
+  const btn = document.getElementById(which === 'safe' ? 'safeBtn' : 'unsafeBtn');
+  const container = document.getElementById(which === 'safe' ? 'safeChat' : 'unsafeChat');
+  const key = select.value;
+  if (!key) return;
+  const userMsg = select.options[select.selectedIndex].text;
+  appendMsg(container, userMsg, true, false);
+  btn.disabled = true;
+  const typing = appendTyping(container);
+  setTimeout(() => {
+    typing.remove();
+    appendMsg(container, chatResponses[which][key], false, which === 'unsafe');
+    btn.disabled = false;
+    select.value = '';
+  }, 800 + Math.random() * 600);
+}
+function askSafe() { ask('safe'); }
+function askUnsafe() { ask('unsafe'); }
+
+// =====================================================================
+// DEMO 6: DEEPFAKE
+// =====================================================================
+function dfPick(card) {
+  const isReal = card.dataset.real === 'true';
+  if (isReal) {
+    card.classList.add('real-correct');
+    card.querySelector('.verdict').textContent = '✓ ИСТИНСКО';
+  } else {
+    card.classList.add('fake-correct');
+    card.querySelector('.verdict').textContent = '✗ ГЕНЕРИРАНО';
+  }
+  card.classList.add('revealed');
+  // Reveal the other one too
+  document.querySelectorAll('.df-card').forEach(c => {
+    if (c === card) return;
+    const r = c.dataset.real === 'true';
+    c.classList.add(r ? 'real-correct' : 'fake-correct', 'revealed');
+    c.querySelector('.verdict').textContent = r ? '✓ ИСТИНСКО' : '✗ ГЕНЕРИРАНО';
+  });
+  document.getElementById('dfExplain').classList.add('show');
+}
+function dfReveal() {
+  document.querySelectorAll('.df-card').forEach(c => {
+    const r = c.dataset.real === 'true';
+    c.classList.add(r ? 'real-correct' : 'fake-correct', 'revealed');
+    c.querySelector('.verdict').textContent = r ? '✓ ИСТИНСКО' : '✗ ГЕНЕРИРАНО';
+  });
+  document.getElementById('dfExplain').classList.add('show');
+}
+function dfReset() {
+  document.querySelectorAll('.df-card').forEach(c => {
+    c.classList.remove('real-correct', 'fake-correct', 'revealed');
+    c.querySelector('.verdict').textContent = '';
+  });
+  document.getElementById('dfExplain').classList.remove('show');
+}
+
+// =====================================================================
+// DEMO 7: QUIZ
+// =====================================================================
+const quizItems = [
+  {
+    from: 'banka@unicredit-secure.com',
+    body: 'Уважаеми клиент, забелязахме необичайна активност в Вашата сметка. За да защитим средствата Ви, моля влезте незабавно през следния линк: unicredit-bg-secure.com/login. Имате 24 часа да потвърдите самоличността си, иначе сметката ще бъде блокирана.',
+    real: false,
+    explain: 'Класическа фишинг измама, написана от ИИ. Подсказки: 1) Адресът на изпращача е „unicredit-secure.com", не истинският домейн на банката. 2) Линкът е фалшив. 3) Спешност („24 часа") — стандартна манипулативна техника. 4) Текстът е перфектен български без обичайните грешки. Това е знак — старите измами имаха грешки, новите ги нямат.'
+  },
+  {
+    from: 'Мама',
+    body: 'Сине, аз съм. Помниш ли че ти казах за майка ми, че е в болница? Изненадаха ме с такса за изследването, не очаквах. Можеш ли да ми пратиш 400 лева на тази карта 4538 1234 5678 9012 до края на деня? Не казвай на татко, ще се изнерви.',
+    real: false,
+    explain: 'Измама с гласово или текстово клониране. Подсказки: 1) Молба за пари + конкретна сума. 2) Молба за тайна („не казвай на татко") — разделя те от хората, които биха те предупредили. 3) Емоционален натиск. 4) Спешност. Ако се случи: обади се директно на номера на майка си от друго място. Договорете тайна дума предварително.'
+  },
+  {
+    from: 'noreply@github.com',
+    body: 'Hi, A new SSH key was added to your GitHub account. Fingerprint: SHA256:nThbg6kXUpJWGl7E1IGOCspRomTxdCARLviKw6E5SY8. If this was you, you can safely ignore this email. If you did not generate this key, please remove it immediately and reset your password.',
+    real: true,
+    explain: 'Истинско известие от GitHub. Подсказки: 1) Изпращачът е действителния домейн. 2) Не иска от теб да натискаш линк. 3) Дава ти спокойна инструкция. 4) Не създава паника. 5) Включва технически детайл (fingerprint). Истинските служби обикновено не молят, а информират.'
+  },
+  {
+    from: 'Иван от 11В',
+    body: 'Йо, имам гадна молба. Загубих си телефона, говоря от чужд. Можеш ли да ми изпратиш кода, който ще ти дойде като SMS? Опитвам се да си вляза във Viber-а да се свържа с мама. Бързо моля.',
+    real: false,
+    explain: 'Класическа измама за превземане на акаунт. Кодът, който ще ти дойде като SMS, е код за достъп до твоя собствен акаунт. Никой не трябва да иска такъв код от теб — нито банка, нито приятел. Подсказки: 1) Молба за код. 2) Спешност. 3) Ползва истинско име на познат. Никога. Не давай. SMS код. На никого.'
+  },
+  {
+    from: 'Учителят по математика',
+    body: 'Здравейте, изпращам ви файла с домашната работа за петък. Решете задачи 1-15 от стр. 84, ще ги проверим в час. Ако имате въпроси, пишете ми тук или ме намерете в учителската стая.',
+    real: true,
+    explain: 'Истинско съобщение. Подсказки: 1) Не иска нищо освен очакваното. 2) Не съдържа линкове. 3) Дава ти алтернативни начини за връзка. 4) Тонът е нормален, не спешен. 5) Контекстът съответства. Скучно? Точно. Истинските съобщения обикновено са скучни.'
+  }
+];
+let quizIdx = 0, quizScore = 0, quizTotal = 0;
+function loadQuizItem() {
+  if (quizIdx >= quizItems.length) {
+    document.getElementById('quizBody').innerHTML = `<strong>Браво!</strong> Завърши теста. Резултат: ${quizScore} от ${quizItems.length}. ${quizScore === quizItems.length ? 'Перфектно — внимателен ум.' : quizScore >= 3 ? 'Добре. Но винаги мисли два пъти преди да натиснеш.' : 'Обърни внимание на знаците.'}`;
+    document.getElementById('quizFrom').textContent = '— Завършен тест';
+    document.getElementById('quizActions').style.display = 'none';
+    document.getElementById('quizFeedback').classList.remove('show', 'correct', 'wrong');
+    return;
+  }
+  const item = quizItems[quizIdx];
+  document.getElementById('quizFrom').textContent = '— ОТ: ' + item.from;
+  document.getElementById('quizBody').textContent = item.body;
+  document.getElementById('quizFeedback').classList.remove('show', 'correct', 'wrong');
+}
+function quizAnswer(userSaidReal) {
+  const item = quizItems[quizIdx];
+  const correct = userSaidReal === item.real;
+  if (correct) quizScore++;
+  const fb = document.getElementById('quizFeedback');
+  fb.innerHTML = `<strong>${correct ? '✓ Правилно' : '✗ Грешка'}</strong>${item.explain}`;
+  fb.classList.add('show', correct ? 'correct' : 'wrong');
+  document.getElementById('quizScore').textContent = quizScore;
+  setTimeout(() => { quizIdx++; loadQuizItem(); }, 4500);
+}
+loadQuizItem();
+document.getElementById('quizTotal').textContent = quizItems.length;
+
+// =====================================================================
+// SCROLL REVEAL
+// =====================================================================
+gsap.utils.toArray('.demo-head').forEach(el => {
+  gsap.from(el, {
+    scrollTrigger: { trigger: el, start: 'top 80%', toggleActions: 'play none none reverse' },
+    y: 40, opacity: 0, duration: 1.2, ease: 'power3.out',
+  });
+});
+gsap.utils.toArray('.lab, .maze-grid, .timeline-3d-wrap, .mythos-stage, .chat-grid, .deepfake-grid, .safety-grid, .quiz, .note').forEach(el => {
+  gsap.from(el, {
+    scrollTrigger: { trigger: el, start: 'top 85%', toggleActions: 'play none none reverse' },
+    y: 60, opacity: 0, duration: 1.2, ease: 'power3.out',
+  });
+});
+</script>
+</body>
+</html>
